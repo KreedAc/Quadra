@@ -21,6 +21,8 @@ data class RecurringRule(
     val description: String,
     val amount: Money,
     val categoryId: String,
+    /** Conto su cui la regola genera i movimenti. */
+    val accountId: String,
     val every: Int,
     val unit: RecurrenceUnit,
     val startDate: LocalDate,

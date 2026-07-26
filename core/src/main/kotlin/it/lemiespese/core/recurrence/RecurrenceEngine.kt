@@ -81,6 +81,7 @@ object RecurrenceEngine {
                     amount = rule.amount,
                     date = date,
                     categoryId = rule.categoryId,
+                    accountId = rule.accountId,
                     description = rule.description,
                     source = TransactionSource.RECURRING,
                     recurringRuleId = rule.id,

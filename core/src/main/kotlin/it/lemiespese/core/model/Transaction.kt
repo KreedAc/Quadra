@@ -17,6 +17,13 @@ enum class TransactionSource {
     MANUAL,
     RECURRING,
     CSV_IMPORT,
+
+    /** Gamba di un trasferimento fra conti. Include il prelievo, che è un trasferimento. */
+    TRANSFER,
+
+    /** Differenza generata allineando il saldo di un conto a quello reale. */
+    ADJUSTMENT,
+
     NOTIFICATION,
 }
 
@@ -48,6 +55,18 @@ data class Transaction(
     val amount: Money,
     val date: LocalDate,
     val categoryId: String,
+    /** Conto da cui esce o in cui entra il denaro. */
+    val accountId: String,
+    /**
+     * Se valorizzato, questo movimento è una delle due gambe di un trasferimento fra
+     * conti, e l'altra gamba porta lo stesso identificativo.
+     *
+     * Serve a impedire il difetto più insidioso di questo genere di app: spostare
+     * cento euro dalla carta ai contanti non è una spesa di cento euro, ma se le due
+     * gambe non sono riconoscibili finiscono nelle statistiche e gonfiano il mese.
+     * Vedi [it.lemiespese.core.ledger.Ledger.spending].
+     */
+    val transferGroupId: String? = null,
     val description: String = "",
     /** Esercente o controparte, quando è nota. Separata da [description] per poterla raggruppare. */
     val merchant: String? = null,
@@ -66,4 +85,7 @@ data class Transaction(
 ) {
     val isExpense: Boolean get() = amount.isExpense
     val isIncome: Boolean get() = amount.isIncome
+
+    /** Una gamba di trasferimento: muove denaro, non lo consuma né lo produce. */
+    val isTransfer: Boolean get() = transferGroupId != null
 }

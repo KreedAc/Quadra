@@ -108,22 +108,49 @@ object DefaultCategories {
         group("tasse", "Tasse", CORALLO, "receipt", 9) {
             listOf("IMU", "TARI", "Imposte sul reddito", "Commercialista", "Multe")
         }
-        group("altro", "Altro", GRIGIO, "dots", 10) {
-            listOf(
-                "Animali domestici", "Scuola e istruzione", "Spese per i figli",
-                "Commissioni bancarie", "Rate e finanziamenti", "Donazioni",
-            )
+        group("animali", "Animali", AMBRA, "pets", 10) {
+            listOf("Cibo", "Veterinario", "Toelettatura", "Accessori")
         }
-        group("entrate", "Entrate", VERDE, "wallet", 11, kind = CategoryKind.INCOME) {
+        group("famiglia", "Famiglia", BLU, "child", 11) {
+            listOf("Scuola e istruzione", "Asilo", "Libri e materiale", "Spese per i figli")
+        }
+        group("regali", "Regali", VIOLA, "gift", 12) {
+            listOf("Compleanni", "Natale", "Matrimoni", "Donazioni")
+        }
+        group("altro", "Altro", GRIGIO, "dots", 13) {
+            listOf("Commissioni bancarie", "Rate e finanziamenti", "Varie")
+        }
+        group("entrate", "Entrate", VERDE, "wallet", 14, kind = CategoryKind.INCOME) {
             listOf(
                 "Stipendio", "Lavoro autonomo", "Rimborsi",
                 "Bonus e sussidi", "Rendite e investimenti",
             )
         }
+
+        // Non compare nella griglia: non la si sceglie, la si riceve. Raccoglie i
+        // trasferimenti fra conti e le differenze di allineamento del saldo.
+        add(
+            Category(
+                id = "rettifica",
+                name = "Rettifiche e giroconti",
+                kind = CategoryKind.EXPENSE,
+                parentId = null,
+                colorArgb = GRIGIO,
+                icon = "swap",
+                sortOrder = 99,
+                isSystem = true,
+                hidden = true,
+            )
+        )
     }
 
-    /** Le voci della griglia, nell'ordine in cui vanno disposte. */
-    val topLevel: List<Category> = all.filter { it.isTopLevel }.sortedBy { it.sortOrder }
+    /**
+     * Le voci della griglia, nell'ordine in cui vanno disposte.
+     * Le nascoste restano fuori: non si scelgono a mano.
+     */
+    val topLevel: List<Category> = all
+        .filter { it.isTopLevel && !it.hidden }
+        .sortedBy { it.sortOrder }
 
     val expenses: List<Category> get() = all.filter { it.isExpense }
     val incomes: List<Category> get() = all.filter { it.isIncome }

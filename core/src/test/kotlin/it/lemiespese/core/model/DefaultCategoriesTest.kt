@@ -18,10 +18,12 @@ class DefaultCategoriesTest {
     @Test
     fun `la griglia sta in una schermata`() {
         // Il primo livello deve restare visibile tutto insieme: è la premessa da cui
-        // dipende la velocità di inserimento. Oltre le dodici voci la griglia comincia
-        // a scorrere e si torna a dover cercare.
+        // dipende la velocità di inserimento. La griglia è di quattro colonne e ne regge
+        // quattro righe, meno una casella riservata a "Personalizza". Oltre quel numero
+        // comincia a scorrere e si torna a dover cercare, cioè si perde esattamente la
+        // proprietà per cui è stata disegnata.
         val n = DefaultCategories.topLevel.size
-        assertTrue(n in 8..12, "il primo livello ha $n voci, la griglia ne regge al massimo 12")
+        assertTrue(n in 8..15, "il primo livello ha $n voci, la griglia ne regge al massimo 15")
     }
 
     @Test

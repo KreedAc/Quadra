@@ -478,6 +478,11 @@
     max-width: 100%;
   }
   .tile.on .box { box-shadow: 0 0 0 2px var(--screen), 0 0 0 4px currentColor; }
+  .tile--add .box {
+    border: 1.5px dashed var(--hairline);
+    color: var(--ink-lo);
+  }
+  .tile--add em { color: var(--ink-lo); }
   .tile.on em { color: var(--ink-hi); font-weight: 700; }
 
   /* Intestazione della categoria scelta, nel secondo passo. */
@@ -528,6 +533,41 @@
     background: linear-gradient(100deg, var(--brand-a), var(--brand-b));
     color: #04121A;
     font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
+  }
+
+  /* ============================================================
+     SCHERMATA CONTI
+     ============================================================ */
+  .money-split { display: flex; flex-direction: column; gap: 3px; }
+  .constrained-note {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12.5px; color: var(--ink-mid);
+    font-variant-numeric: tabular-nums;
+  }
+  .section-lbl {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em;
+    font-weight: 700; color: var(--ink-lo);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .section-lbl .amt { letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  .acct-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--hairline);
+  }
+  .acct-row:last-child { border-bottom: 0; }
+  .acct-tile { width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; flex: none; }
+  .acct-row .nm { flex: 1; font-size: 14.5px; font-weight: 500; letter-spacing: -0.005em; }
+  .acct-row .bal { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .acct-row .bal--zero { color: var(--ink-lo); font-weight: 500; }
+
+  .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .action { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .action .box {
+    width: 100%; height: 52px; border-radius: 17px;
+    display: grid; place-items: center; background: var(--raised);
+  }
+  .action em {
+    font-style: normal; font-size: 10.5px; font-weight: 500; color: var(--ink-mid);
   }
 
   /* ============================================================
@@ -750,6 +790,45 @@
     <path d="M5.6 3.4h12.8v17.2l-2.1-1.4-2.1 1.4-2.2-1.4-2.1 1.4-2.1-1.4-2.2 1.4Z"/>
     <path d="M8.8 8.2h6.4M8.8 12.2h6.4"/>
   </symbol>
+  <symbol id="ic-transfer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 8.6h13.4"/><path d="m14.6 5.4 3.2 3.2-3.2 3.2"/>
+    <path d="M20 15.4H6.6"/><path d="m9.4 12.2-3.2 3.2 3.2 3.2"/>
+  </symbol>
+  <symbol id="ic-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 19.4V5"/><path d="m6.6 10.4 5.4-5.4 5.4 5.4"/>
+  </symbol>
+  <symbol id="ic-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16.2 4.2a2.1 2.1 0 0 1 3 3L9 17.4l-4 1 1-4Z"/><path d="m14.6 5.8 3 3"/>
+  </symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4.8" y="10.2" width="14.4" height="9.6" rx="2.2"/>
+    <path d="M8.4 10.2V7.6a3.6 3.6 0 0 1 7.2 0v2.6"/>
+  </symbol>
+  <symbol id="ic-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.4"/><path d="M2.8 9.8h18.4"/><path d="M6.4 14.6h3.4"/>
+  </symbol>
+  <symbol id="ic-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m3.2 9.4 8.8-5.2 8.8 5.2"/><path d="M4.8 9.4v8.4M10 9.4v8.4M14 9.4v8.4M19.2 9.4v8.4"/>
+    <path d="M2.8 20.2h18.4"/>
+  </symbol>
+  <symbol id="ic-piggy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.4 12.6c0-3.6 3.5-6.2 7.8-6.2 4.3 0 7.8 2.6 7.8 6.2 0 1.7-.8 3.2-2 4.3v2.4h-2.6l-.7-1.4a11 11 0 0 1-5 0l-.7 1.4H5.4v-2.4a6.4 6.4 0 0 1-1.3-2H2.8v-2.3Z"/>
+    <circle cx="14.8" cy="11.6" r=".9" fill="currentColor" stroke="none"/><path d="M9 6.6 8.2 4"/>
+  </symbol>
+  <symbol id="ic-pets" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="6.4" cy="9.6" rx="1.9" ry="2.5"/><ellipse cx="17.6" cy="9.6" rx="1.9" ry="2.5"/>
+    <ellipse cx="10" cy="5.4" rx="1.8" ry="2.4"/><ellipse cx="14" cy="5.4" rx="1.8" ry="2.4"/>
+    <path d="M12 13.2c2.6 0 4.6 1.9 4.6 4a2.6 2.6 0 0 1-3.5 2.4 3.4 3.4 0 0 0-2.2 0 2.6 2.6 0 0 1-3.5-2.4c0-2.1 2-4 4.6-4Z"/>
+  </symbol>
+  <symbol id="ic-child" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="5.6" r="2.6"/><path d="M12 8.2v6.4"/><path d="M7.4 11h9.2"/>
+    <path d="m9.4 20.6 2.6-6 2.6 6"/>
+  </symbol>
+  <symbol id="ic-gift" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.6 9.6h16.8v3.2H3.6z"/><path d="M5.2 12.8v6.4a1.4 1.4 0 0 0 1.4 1.4h10.8a1.4 1.4 0 0 0 1.4-1.4v-6.4"/>
+    <path d="M12 9.6v11"/>
+    <path d="M12 9.6S10.8 5 8.4 5a2.3 2.3 0 0 0 0 4.6ZM12 9.6S13.2 5 15.6 5a2.3 2.3 0 0 1 0 4.6Z"/>
+  </symbol>
   <symbol id="ic-dots" viewBox="0 0 24 24" fill="currentColor">
     <circle cx="6.2" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="17.8" cy="12" r="1.5"/>
   </symbol>
@@ -922,27 +1001,7 @@
             <div class="sheet">
               <span class="grabber"></span>
 
-              <div class="sheet-title"><span>Le tue più usate</span><span>Ultimi 30 giorni</span></div>
-              <div class="grid">
-                <span class="tile">
-                  <span class="box" style="background:color-mix(in oklab, var(--cat-verde) 20%, transparent); color:var(--cat-verde)">
-                    <svg width="22" height="22"><use href="#ic-cart"/></svg></span><em>Spesa</em>
-                </span>
-                <span class="tile">
-                  <span class="box" style="background:color-mix(in oklab, var(--cat-oliva) 22%, transparent); color:var(--cat-oliva)">
-                    <svg width="22" height="22"><use href="#ic-coffee"/></svg></span><em>Bar</em>
-                </span>
-                <span class="tile">
-                  <span class="box" style="background:color-mix(in oklab, var(--cat-ambra) 22%, transparent); color:var(--cat-ambra)">
-                    <svg width="22" height="22"><use href="#ic-fuel"/></svg></span><em>Benzina</em>
-                </span>
-                <span class="tile">
-                  <span class="box" style="background:color-mix(in oklab, var(--cat-corallo) 20%, transparent); color:var(--cat-corallo)">
-                    <svg width="22" height="22"><use href="#ic-restaurant"/></svg></span><em>Ristoranti</em>
-                </span>
-              </div>
-
-              <div class="sheet-title"><span>Tutte le categorie</span></div>
+              <div class="sheet-title"><span>Dove è andata</span><span>Tocca per scegliere</span></div>
               <div class="grid">
                 <span class="tile">
                   <span class="box" style="background:color-mix(in oklab, var(--cat-verde) 20%, transparent); color:var(--cat-verde)">
@@ -987,12 +1046,27 @@
                     <svg width="22" height="22"><use href="#ic-receipt"/></svg></span><em>Tasse</em>
                 </span>
                 <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-ambra) 22%, transparent); color:var(--cat-ambra)">
+                    <svg width="22" height="22"><use href="#ic-pets"/></svg></span><em>Animali</em>
+                </span>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-blu) 22%, transparent); color:var(--cat-blu)">
+                    <svg width="22" height="22"><use href="#ic-child"/></svg></span><em>Famiglia</em>
+                </span>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-viola) 22%, transparent); color:var(--cat-viola)">
+                    <svg width="22" height="22"><use href="#ic-gift"/></svg></span><em>Regali</em>
+                </span>
+                <span class="tile">
                   <span class="box" style="background:color-mix(in oklab, var(--ink-lo) 22%, transparent); color:var(--ink-mid)">
                     <svg width="22" height="22"><use href="#ic-dots"/></svg></span><em>Altro</em>
                 </span>
                 <span class="tile">
                   <span class="box" style="background:color-mix(in oklab, var(--cat-verde) 20%, transparent); color:var(--cat-verde)">
                     <svg width="22" height="22"><use href="#ic-wallet"/></svg></span><em>Entrate</em>
+                </span>
+                <span class="tile tile--add">
+                  <span class="box"><svg width="20" height="20"><use href="#ic-plus"/></svg></span><em>Personalizza</em>
                 </span>
               </div>
             </div>
@@ -1002,9 +1076,9 @@
         <div class="caption">
           <h3>Primo tocco: la griglia, mai una lista</h3>
           <p>
-            Dodici categorie tutte visibili insieme, sempre nelle stesse posizioni. Non si
-            scorre e non si cerca: dopo una settimana il pollice ci arriva da solo. In alto
-            le quattro che usi davvero, calcolate sugli ultimi trenta giorni.
+            Quindici categorie tutte visibili insieme, sempre nelle stesse posizioni. Non si
+            scorre e non si cerca: dopo una settimana il pollice ci arriva da solo.
+            L'ultima casella è tua: aggiungi, rinomina, riordina, cambia icona.
           </p>
         </div>
       </div>
@@ -1210,22 +1284,216 @@
         <div class="note">
           <h4>Due livelli, non quaranta voci</h4>
           <p>
-            Dodici categorie in alto per la memoria spaziale, le sottocategorie sotto per il
-            dettaglio. La struttura esiste già nel codice — quello che oggi è il campo
+            Quindici categorie in alto per la memoria spaziale, le sottocategorie sotto per
+            il dettaglio. La struttura esiste già nel codice — quello che oggi è il campo
             <em>gruppo</em> diventa il primo livello, e le categorie attuali diventano il
             secondo.
           </p>
         </div>
         <div class="note">
-          <h4>La riga che impara</h4>
+          <h4>La griglia è tua</h4>
           <p>
-            "Le tue più usate" si ricalcola sugli ultimi trenta giorni. Dopo due settimane
-            copre la grande maggioranza degli inserimenti e la spesa quotidiana si chiude
-            senza mai scendere alla griglia intera. Il calcolo avviene sul telefono, come
-            tutto il resto.
+            Le quindici caselle sono un punto di partenza, non una gabbia: si rinominano, si
+            riordinano, si cambia icona e colore, e se ne aggiungono. Chi tiene le
+            predefinite non tocca nulla; chi ha una vita diversa se la disegna. In entrambi
+            i casi le posizioni restano ferme, ed è quello che conta.
           </p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ CONTI ══════════════ -->
+  <section>
+    <h2>I conti, e i soldi che non puoi spendere</h2>
+    <p class="sub">
+      Le domande "quanto ho speso" e "quanto mi resta" hanno risposte diverse, e la seconda
+      richiede di sapere dove stanno i soldi. Qui però c'è una decisione che va oltre
+      l'elenco: non tutto il denaro che possiedi è denaro che puoi usare.
+    </p>
+
+    <div class="devices" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));max-width:760px">
+
+      <div class="device-cell">
+        <div class="phone">
+          <div class="screen">
+
+            <div class="statusbar">
+              <span>21:52</span>
+              <span class="icons">
+                <span class="bars"><i></i><i></i><i></i><i></i></span>
+                <span class="batt"><span></span></span>
+              </span>
+            </div>
+
+            <div class="body">
+              <div class="apptop">
+                <span class="month">Conti</span>
+                <span class="iconbtn"><svg width="15" height="15"><use href="#ic-plus"/></svg></span>
+              </div>
+
+              <div class="balance">
+                <div class="lbl">Disponibile</div>
+                <div class="money-split">
+                  <div class="amount-xl">1.697,40<span class="cur">€</span></div>
+                  <div class="constrained-note" style="margin-top:9px">
+                    <svg width="13" height="13"><use href="#ic-lock"/></svg>
+                    più 1.280,00 € vincolati
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="section-lbl" style="margin-bottom:4px">
+                  <span>Spendibili</span><span class="amt">1.697,40 €</span>
+                </div>
+                <div>
+                  <div class="acct-row">
+                    <span class="acct-tile" style="background:color-mix(in oklab, var(--cat-blu) 22%, transparent); color:var(--cat-blu)">
+                      <svg width="19" height="19"><use href="#ic-bank"/></svg></span>
+                    <span class="nm">Conto corrente</span>
+                    <span class="bal">1.240,00 €</span>
+                  </div>
+                  <div class="acct-row">
+                    <span class="acct-tile" style="background:color-mix(in oklab, var(--cat-ciano) 22%, transparent); color:var(--cat-ciano)">
+                      <svg width="19" height="19"><use href="#ic-card"/></svg></span>
+                    <span class="nm">Revolut</span>
+                    <span class="bal">312,40 €</span>
+                  </div>
+                  <div class="acct-row">
+                    <span class="acct-tile" style="background:color-mix(in oklab, var(--cat-verde) 22%, transparent); color:var(--cat-verde)">
+                      <svg width="19" height="19"><use href="#ic-wallet"/></svg></span>
+                    <span class="nm">Contanti</span>
+                    <span class="bal">145,00 €</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="section-lbl" style="margin-bottom:4px">
+                  <span>Vincolati</span><span class="amt">1.280,00 €</span>
+                </div>
+                <div>
+                  <div class="acct-row">
+                    <span class="acct-tile" style="background:color-mix(in oklab, var(--ink-lo) 20%, transparent); color:var(--ink-mid)">
+                      <svg width="19" height="19"><use href="#ic-card"/></svg></span>
+                    <span class="nm">Carta ADI</span>
+                    <span class="bal">380,00 €</span>
+                  </div>
+                  <div class="acct-row">
+                    <span class="acct-tile" style="background:color-mix(in oklab, var(--cat-oliva) 22%, transparent); color:var(--cat-oliva)">
+                      <svg width="19" height="19"><use href="#ic-piggy"/></svg></span>
+                    <span class="nm">Fondo risparmio</span>
+                    <span class="bal">900,00 €</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <nav class="nav">
+              <a href="#" class="on"><svg width="21" height="21"><use href="#ic-wallet"/></svg>Conti</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-list"/></svg>Movimenti</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-chart"/></svg>Statistiche</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-gear"/></svg>Impostazioni</a>
+            </nav>
+
+          </div>
+        </div>
+        <div class="caption">
+          <h3>Vincolato non vuol dire nascosto</h3>
+          <p>
+            La carta ADI contiene denaro che non puoi spendere per quello che vuoi, quindi
+            sommarlo alla disponibilità ti fa credere di avere più di quanto hai. Ma
+            togliergli la spunta e farlo sparire è peggio: dimentichi che esiste. Qui resta
+            a vista, in un totale suo, e la riga sotto il saldo te lo ricorda.
+          </p>
+        </div>
+      </div>
+
+      <div class="device-cell">
+        <div class="phone">
+          <div class="screen">
+
+            <div class="statusbar">
+              <span>21:53</span>
+              <span class="icons">
+                <span class="bars"><i></i><i></i><i></i><i></i></span>
+                <span class="batt"><span></span></span>
+              </span>
+            </div>
+
+            <div class="body dimmed">
+              <div class="apptop"><span class="month">Conti</span></div>
+              <div class="balance">
+                <div class="lbl">Disponibile</div>
+                <div class="amount-xl">1.697,40<span class="cur">€</span></div>
+              </div>
+            </div>
+
+            <div class="sheet">
+              <span class="grabber"></span>
+
+              <div class="picked" style="background:color-mix(in oklab, var(--cat-ciano) 18%, transparent)">
+                <span class="box" style="background:color-mix(in oklab, var(--cat-ciano) 30%, transparent); color:var(--cat-ciano)">
+                  <svg width="17" height="17"><use href="#ic-card"/></svg>
+                </span>
+                <span class="nm">Revolut</span>
+                <span class="swap">312,40 €</span>
+              </div>
+
+              <div class="actions">
+                <span class="action">
+                  <span class="box" style="color:var(--cat-ciano)"><svg width="22" height="22"><use href="#ic-transfer"/></svg></span>
+                  <em>Trasferisci</em>
+                </span>
+                <span class="action">
+                  <span class="box" style="color:var(--cat-verde)"><svg width="22" height="22"><use href="#ic-arrow-up"/></svg></span>
+                  <em>Ricarica</em>
+                </span>
+                <span class="action">
+                  <span class="box" style="color:var(--ink-mid)"><svg width="22" height="22"><use href="#ic-list"/></svg></span>
+                  <em>Movimenti</em>
+                </span>
+                <span class="action">
+                  <span class="box" style="color:var(--ink-mid)"><svg width="22" height="22"><use href="#ic-pencil"/></svg></span>
+                  <em>Modifica</em>
+                </span>
+              </div>
+
+              <div class="sheet-title" style="margin-top:4px"><span>Allinea il saldo</span></div>
+              <div class="upcoming" style="background:var(--raised);box-shadow:none">
+                <span class="txt">
+                  <span class="t1">Il saldo reale è diverso?</span>
+                  <span class="t2">Scrivilo: la differenza diventa un movimento</span>
+                </span>
+                <span class="val" style="color:var(--cat-ciano)">Allinea</span>
+              </div>
+
+              <div class="entry-amount" style="font-size:38px">312,40<span class="cur" style="font-size:23px">€</span></div>
+
+              <div class="keypad">
+                <span class="key">1</span><span class="key">2</span><span class="key">3</span>
+                <span class="key">4</span><span class="key">5</span><span class="key">6</span>
+                <span class="key">7</span><span class="key">8</span><span class="key">9</span>
+                <span class="key key--soft">,</span>
+                <span class="key">0</span>
+                <span class="key key--soft"><svg width="21" height="21"><use href="#ic-back-key"/></svg></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="caption">
+          <h3>Quattro azioni, non sei</h3>
+          <p>
+            Manca "Preleva", perché prelevare al bancomat <em>è</em> un trasferimento dal
+            conto ai contanti: due nomi per la stessa cosa costringono solo a scegliere ogni
+            volta. E manca "Bilancio", sostituito da "Allinea il saldo", che invece di
+            riscrivere il numero genera la differenza come movimento.
+          </p>
+        </div>
+      </div>
+
     </div>
   </section>
 
