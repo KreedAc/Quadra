@@ -449,10 +449,51 @@
     background: var(--raised); color: var(--ink-mid);
     font-size: 12px; font-weight: 500; white-space: nowrap;
   }
+  /* Griglia delle categorie: posizioni fisse, tutte visibili insieme.
+     È il punto centrale del disegno — una lista che scorre obbliga a leggere
+     ogni volta, una griglia ferma si impara col pollice e dopo una settimana
+     non la si guarda nemmeno più. */
+  .sheet-title {
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-size: 12.5px; color: var(--ink-lo); font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px 6px;
+  }
+  .tile {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    min-width: 0;
+  }
+  .tile .box {
+    width: 46px; height: 46px; border-radius: 15px;
+    display: grid; place-items: center;
+  }
+  .tile em {
+    font-style: normal; font-size: 10px; font-weight: 500;
+    color: var(--ink-mid); text-align: center; line-height: 1.15;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .tile.on .box { box-shadow: 0 0 0 2px var(--screen), 0 0 0 4px currentColor; }
+  .tile.on em { color: var(--ink-hi); font-weight: 700; }
+
+  /* Intestazione della categoria scelta, nel secondo passo. */
+  .picked {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 16px;
+  }
+  .picked .box { width: 32px; height: 32px; border-radius: 11px; display: grid; place-items: center; }
+  .picked .nm { flex: 1; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .picked .swap { font-size: 12px; font-weight: 500; opacity: 0.75; }
+
   .cats {
     display: flex; gap: 7px; overflow: hidden;
     padding-bottom: 1px;
   }
+  .cat--add { padding: 7px 11px; }
   .cat {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 7px 12px 7px 8px; border-radius: 99px;
@@ -689,6 +730,29 @@
     <path d="M20.4 9.2V6.8a1.6 1.6 0 0 0-1.6-1.6H4.8A1.6 1.6 0 0 0 3.2 6.8v10.4a1.6 1.6 0 0 0 1.6 1.6h14a1.6 1.6 0 0 0 1.6-1.6v-2.4"/>
     <path d="M21.6 9.2h-4.4a2.4 2.4 0 0 0 0 4.8h4.4Z"/>
   </symbol>
+  <symbol id="ic-restaurant" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6.2 3.2v6.4a2.4 2.4 0 0 0 4.8 0V3.2"/><path d="M8.6 12v8.8"/>
+    <path d="M17.6 3.2c-1.7 1.2-2.6 3-2.6 5.4 0 1.9.9 3 2.6 3.3v9"/>
+  </symbol>
+  <symbol id="ic-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 13.6l1.8-4.8a2 2 0 0 1 1.9-1.4h8.6a2 2 0 0 1 1.9 1.4l1.8 4.8v4.2a1 1 0 0 1-1 1h-1.6a1 1 0 0 1-1-1v-.8H7.6v.8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z"/>
+    <path d="M4 13.6h16"/><circle cx="7.6" cy="15.6" r=".9"/><circle cx="16.4" cy="15.6" r=".9"/>
+  </symbol>
+  <symbol id="ic-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5.4 8h13.2l-1.1 11.4a1.6 1.6 0 0 1-1.6 1.4H8.1a1.6 1.6 0 0 1-1.6-1.4Z"/>
+    <path d="M9 10.2V6.8a3 3 0 0 1 6 0v3.4"/>
+  </symbol>
+  <symbol id="ic-ticket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.4 9.6V7.4A1.4 1.4 0 0 1 4.8 6h14.4a1.4 1.4 0 0 1 1.4 1.4v2.2a2.5 2.5 0 0 0 0 4.8v2.2a1.4 1.4 0 0 1-1.4 1.4H4.8a1.4 1.4 0 0 1-1.4-1.4v-2.2a2.5 2.5 0 0 0 0-4.8Z"/>
+    <path d="M14 7.4v1.8M14 11.1v1.8M14 14.8v1.8"/>
+  </symbol>
+  <symbol id="ic-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5.6 3.4h12.8v17.2l-2.1-1.4-2.1 1.4-2.2-1.4-2.1 1.4-2.1-1.4-2.2 1.4Z"/>
+    <path d="M8.8 8.2h6.4M8.8 12.2h6.4"/>
+  </symbol>
+  <symbol id="ic-dots" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="6.2" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="17.8" cy="12" r="1.5"/>
+  </symbol>
   <symbol id="ic-back-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M20 5.8H9.4L3.4 12l6 6.2H20a1.4 1.4 0 0 0 1.4-1.4V7.2A1.4 1.4 0 0 0 20 5.8Z"/>
     <path d="m11.6 9.8 5 4.4M16.6 9.8l-5 4.4"/>
@@ -858,48 +922,89 @@
             <div class="sheet">
               <span class="grabber"></span>
 
-              <div class="entry-amount">12,80<span class="caret"></span><span class="cur">€</span></div>
-
-              <div class="entry-meta">
-                <span class="chip">Oggi · 26 lug</span>
-                <span class="chip">Aggiungi nota</span>
-              </div>
-
-              <div class="cats">
-                <span class="cat on">
-                  <span class="dot" style="background:var(--cat-verde)"></span>Spesa
+              <div class="sheet-title"><span>Le tue più usate</span><span>Ultimi 30 giorni</span></div>
+              <div class="grid">
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-verde) 20%, transparent); color:var(--cat-verde)">
+                    <svg width="22" height="22"><use href="#ic-cart"/></svg></span><em>Spesa</em>
                 </span>
-                <span class="cat">
-                  <span class="dot" style="background:var(--cat-ambra)"></span>Carburante
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-oliva) 22%, transparent); color:var(--cat-oliva)">
+                    <svg width="22" height="22"><use href="#ic-coffee"/></svg></span><em>Bar</em>
                 </span>
-                <span class="cat">
-                  <span class="dot" style="background:var(--cat-blu)"></span>Casa
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-ambra) 22%, transparent); color:var(--cat-ambra)">
+                    <svg width="22" height="22"><use href="#ic-fuel"/></svg></span><em>Benzina</em>
                 </span>
-                <span class="cat">
-                  <span class="dot" style="background:var(--cat-ciano)"></span>Salute
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-corallo) 20%, transparent); color:var(--cat-corallo)">
+                    <svg width="22" height="22"><use href="#ic-restaurant"/></svg></span><em>Ristoranti</em>
                 </span>
               </div>
 
-              <div class="keypad">
-                <span class="key">1</span><span class="key">2</span><span class="key">3</span>
-                <span class="key">4</span><span class="key">5</span><span class="key">6</span>
-                <span class="key">7</span><span class="key">8</span><span class="key">9</span>
-                <span class="key key--soft">,</span>
-                <span class="key">0</span>
-                <span class="key key--soft"><svg width="21" height="21"><use href="#ic-back-key"/></svg></span>
-              </div>
+              <div class="sheet-title"><span>Tutte le categorie</span></div>
+              <div class="grid">
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-verde) 20%, transparent); color:var(--cat-verde)">
+                    <svg width="22" height="22"><use href="#ic-cart"/></svg></span><em>Spesa</em>
+                </span>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-oliva) 22%, transparent); color:var(--cat-oliva)">
+                    <svg width="22" height="22"><use href="#ic-coffee"/></svg></span><em>Bar</em>
+                </span>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-corallo) 20%, transparent); color:var(--cat-corallo)">
+                    <svg width="22" height="22"><use href="#ic-restaurant"/></svg></span><em>Ristoranti</em>
+                </span>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-ambra) 22%, transparent); color:var(--cat-ambra)">
+                    <svg width="22" height="22"><use href="#ic-car"/></svg></span><em>Trasporti</em>
+                </span>
 
-              <div class="cta">Salva</div>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-blu) 22%, transparent); color:var(--cat-blu)">
+                    <svg width="22" height="22"><use href="#ic-building"/></svg></span><em>Casa</em>
+                </span>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-viola) 22%, transparent); color:var(--cat-viola)">
+                    <svg width="22" height="22"><use href="#ic-bolt"/></svg></span><em>Bollette</em>
+                </span>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-ciano) 22%, transparent); color:var(--cat-ciano)">
+                    <svg width="22" height="22"><use href="#ic-pill"/></svg></span><em>Salute</em>
+                </span>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-rosa) 22%, transparent); color:var(--cat-rosa)">
+                    <svg width="22" height="22"><use href="#ic-bag"/></svg></span><em>Shopping</em>
+                </span>
+
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-oliva) 22%, transparent); color:var(--cat-oliva)">
+                    <svg width="22" height="22"><use href="#ic-ticket"/></svg></span><em>Svago</em>
+                </span>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-corallo) 20%, transparent); color:var(--cat-corallo)">
+                    <svg width="22" height="22"><use href="#ic-receipt"/></svg></span><em>Tasse</em>
+                </span>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--ink-lo) 22%, transparent); color:var(--ink-mid)">
+                    <svg width="22" height="22"><use href="#ic-dots"/></svg></span><em>Altro</em>
+                </span>
+                <span class="tile">
+                  <span class="box" style="background:color-mix(in oklab, var(--cat-verde) 20%, transparent); color:var(--cat-verde)">
+                    <svg width="22" height="22"><use href="#ic-wallet"/></svg></span><em>Entrate</em>
+                </span>
+              </div>
             </div>
 
           </div>
         </div>
         <div class="caption">
-          <h3>Tre tocchi, poi è finita</h3>
+          <h3>Primo tocco: la griglia, mai una lista</h3>
           <p>
-            Importo, categoria, salva. Tastierino grande e disegnato da noi — quella di
-            sistema è lenta e sbagliata per i numeri. Tutto quello che si tocca sta nella
-            metà bassa, raggiungibile col pollice senza spostare la mano.
+            Dodici categorie tutte visibili insieme, sempre nelle stesse posizioni. Non si
+            scorre e non si cerca: dopo una settimana il pollice ci arriva da solo. In alto
+            le quattro che usi davvero, calcolate sugli ultimi trenta giorni.
           </p>
         </div>
       </div>
@@ -976,9 +1081,9 @@
                     <span class="bd-track"><i style="width:24%;background:var(--cat-ciano)"></i></span>
                   </div>
                   <div class="bd-row">
-                    <span class="bd-name"><span class="dot" style="background:var(--cat-viola)"></span>Tempo libero</span>
+                    <span class="bd-name"><span class="dot" style="background:var(--cat-oliva)"></span>Tempo libero</span>
                     <span class="bd-val">94,00 €</span>
-                    <span class="bd-track"><i style="width:19%;background:var(--cat-viola)"></i></span>
+                    <span class="bd-track"><i style="width:19%;background:var(--cat-oliva)"></i></span>
                   </div>
                   <div class="bd-row">
                     <span class="bd-name"><span class="dot" style="background:var(--ink-lo)"></span>Altro</span>
@@ -1009,6 +1114,118 @@
         </div>
       </div>
 
+    </div>
+  </section>
+
+  <!-- ══════════════ SECONDO PASSO DELL'INSERIMENTO ══════════════ -->
+  <section>
+    <h2>Secondo tocco: il dettaglio, e sei fuori</h2>
+    <p class="sub">
+      Scelta la categoria, la griglia lascia il posto al tastierino. Le sottocategorie sono
+      la granularità vera — quella che in un elenco piatto produrrebbe quaranta voci da
+      scorrere, e che qui invece resta a un tocco perché è già filtrata dalla scelta
+      precedente. Le crea l'utente, e si riordinano da sole per frequenza.
+    </p>
+
+    <div class="devices" style="grid-template-columns:minmax(300px,360px) 1fr;align-items:center;justify-items:start;gap:clamp(28px,5vw,64px)">
+      <div class="device-cell">
+        <div class="phone">
+          <div class="screen">
+
+            <div class="statusbar">
+              <span>21:48</span>
+              <span class="icons">
+                <span class="bars"><i></i><i></i><i></i><i></i></span>
+                <span class="batt"><span></span></span>
+              </span>
+            </div>
+
+            <div class="body dimmed">
+              <div class="apptop">
+                <span class="month">Luglio 2026
+                  <svg width="17" height="17"><use href="#ic-chevron"/></svg>
+                </span>
+              </div>
+              <div class="balance">
+                <div class="lbl">Speso questo mese</div>
+                <div class="amount-xl">1.284,60<span class="cur">€</span></div>
+                <div class="track"><i style="width:71.4%"></i></div>
+              </div>
+            </div>
+
+            <div class="sheet">
+              <span class="grabber"></span>
+
+              <div class="picked" style="background:color-mix(in oklab, var(--cat-corallo) 18%, transparent)">
+                <span class="box" style="background:color-mix(in oklab, var(--cat-corallo) 30%, transparent); color:var(--cat-corallo)">
+                  <svg width="17" height="17"><use href="#ic-restaurant"/></svg>
+                </span>
+                <span class="nm">Ristoranti</span>
+                <span class="swap">Cambia</span>
+              </div>
+
+              <div class="cats">
+                <span class="cat on" style="background:color-mix(in oklab, var(--cat-corallo) 22%, var(--card)); box-shadow:0 0 0 1px color-mix(in oklab, var(--cat-corallo) 55%, transparent) inset">
+                  MC
+                </span>
+                <span class="cat">Pizza</span>
+                <span class="cat">Sushi</span>
+                <span class="cat cat--add"><svg width="13" height="13"><use href="#ic-plus"/></svg></span>
+              </div>
+
+              <div class="entry-amount">12,80<span class="caret"></span><span class="cur">€</span></div>
+
+              <div class="entry-meta">
+                <span class="chip">Oggi · 26 lug</span>
+                <span class="chip">Aggiungi nota</span>
+              </div>
+
+              <div class="keypad">
+                <span class="key">1</span><span class="key">2</span><span class="key">3</span>
+                <span class="key">4</span><span class="key">5</span><span class="key">6</span>
+                <span class="key">7</span><span class="key">8</span><span class="key">9</span>
+                <span class="key key--soft">,</span>
+                <span class="key">0</span>
+                <span class="key key--soft"><svg width="21" height="21"><use href="#ic-back-key"/></svg></span>
+              </div>
+
+              <div class="cta">Salva</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="notes" style="grid-template-columns:1fr;gap:22px;max-width:46ch">
+        <div class="note">
+          <h4>Perché una griglia batte un elenco</h4>
+          <p>
+            Un nastro che scorre non ha posizioni stabili: ogni volta bisogna leggere per
+            trovare la voce giusta, e con quaranta categorie diventa una ricerca. Una
+            griglia ferma si impara col pollice in una settimana e poi si smette di
+            guardarla. La velocità non viene dai tocchi risparmiati, viene dal non dover
+            cercare.
+          </p>
+        </div>
+        <div class="note">
+          <h4>Due livelli, non quaranta voci</h4>
+          <p>
+            Dodici categorie in alto per la memoria spaziale, le sottocategorie sotto per il
+            dettaglio. La struttura esiste già nel codice — quello che oggi è il campo
+            <em>gruppo</em> diventa il primo livello, e le categorie attuali diventano il
+            secondo.
+          </p>
+        </div>
+        <div class="note">
+          <h4>La riga che impara</h4>
+          <p>
+            "Le tue più usate" si ricalcola sugli ultimi trenta giorni. Dopo due settimane
+            copre la grande maggioranza degli inserimenti e la spesa quotidiana si chiude
+            senza mai scendere alla griglia intera. Il calcolo avviene sul telefono, come
+            tutto il resto.
+          </p>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1205,14 +1422,14 @@
         superato. La coppia rosso/verde non è mai adiacente.
       </p>
       <div class="swatches">
-        <div class="sw"><div class="chipcolor" style="background:#12A374"></div><div class="meta"><div class="nm">Verde</div><div class="hex">#12A374</div><div class="role">Spesa quotidiana</div></div></div>
-        <div class="sw"><div class="chipcolor" style="background:#8B5CF6"></div><div class="meta"><div class="nm">Viola</div><div class="hex">#8B5CF6</div><div class="role">Tempo libero</div></div></div>
-        <div class="sw"><div class="chipcolor" style="background:#E85545"></div><div class="meta"><div class="nm">Corallo</div><div class="hex">#E85545</div><div class="role">Tasse e tributi</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#12A374"></div><div class="meta"><div class="nm">Verde</div><div class="hex">#12A374</div><div class="role">Spesa ed entrate</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#8B5CF6"></div><div class="meta"><div class="nm">Viola</div><div class="hex">#8B5CF6</div><div class="role">Bollette</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#E85545"></div><div class="meta"><div class="nm">Corallo</div><div class="hex">#E85545</div><div class="role">Ristoranti e tasse</div></div></div>
         <div class="sw"><div class="chipcolor" style="background:#0E93AE"></div><div class="meta"><div class="nm">Ciano</div><div class="hex">#0E93AE</div><div class="role">Salute</div></div></div>
-        <div class="sw"><div class="chipcolor" style="background:#B07F0A"></div><div class="meta"><div class="nm">Ambra</div><div class="hex">#B07F0A</div><div class="role">Trasporti</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#B07F0A"></div><div class="meta"><div class="nm">Ambra</div><div class="hex">#B07F0A</div><div class="role">Auto e trasporti</div></div></div>
         <div class="sw"><div class="chipcolor" style="background:#3B7BE8"></div><div class="meta"><div class="nm">Blu</div><div class="hex">#3B7BE8</div><div class="role">Casa</div></div></div>
-        <div class="sw"><div class="chipcolor" style="background:#DB4F92"></div><div class="meta"><div class="nm">Rosa</div><div class="hex">#DB4F92</div><div class="role">Persona</div></div></div>
-        <div class="sw"><div class="chipcolor" style="background:#6E9E2F"></div><div class="meta"><div class="nm">Oliva</div><div class="hex">#6E9E2F</div><div class="role">Finanza</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#DB4F92"></div><div class="meta"><div class="nm">Rosa</div><div class="hex">#DB4F92</div><div class="role">Shopping</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#6E9E2F"></div><div class="meta"><div class="nm">Oliva</div><div class="hex">#6E9E2F</div><div class="role">Bar e svago</div></div></div>
       </div>
     </div>
 

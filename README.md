@@ -50,6 +50,15 @@ sbagliati proprio nel caso più frequente.
 IMU, TARI. Se l'utente le trova già pronte, l'app sembra pensata per lui. Non è
 localizzazione, è il posizionamento del prodotto.
 
+**Le categorie stanno su due livelli, ordinati per frequenza e non per parentela.** Il
+primo livello è una dozzina di voci disposte in una griglia fissa che sta tutta su una
+schermata; il secondo è il dettaglio, che resta a un tocco perché la scelta precedente
+lo ha già filtrato. È la decisione da cui dipende la velocità di inserimento: un elenco
+piatto di quaranta voci che scorre obbliga a *leggere* ogni volta per trovare quella
+giusta, mentre una griglia ferma si impara col pollice in una settimana. La velocità non
+viene dai tocchi risparmiati, viene dal non dover cercare. Per questo il test sul primo
+livello fallisce se le voci superano dodici.
+
 ### Fuori perimetro per la v1
 
 **Cattura automatica dalle notifiche.** Era l'idea di partenza, è stata scartata: il

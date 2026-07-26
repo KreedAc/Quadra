@@ -4,12 +4,20 @@ package it.lemiespese.core.model
 enum class CategoryKind { EXPENSE, INCOME }
 
 /**
- * Categoria di spesa o entrata.
+ * Categoria di spesa o entrata, su due livelli.
  *
- * [id] è una stringa stabile e non un intero autoincrementale: le categorie finiscono
- * nei backup e devono poter essere riconciliate fra dispositivi diversi senza collisioni.
- * Le categorie di sistema hanno id leggibili ("casa.condominio") proprio per restare
- * riconoscibili in un file di backup aperto a mano.
+ * I due livelli non sono una raffinatezza tassonomica, sono la ragione per cui
+ * l'inserimento è veloce. Il primo livello è una dozzina di voci disposte in una griglia
+ * fissa: sta tutto su una schermata, non scorre, e dopo una settimana il pollice ci
+ * arriva senza leggere. Il secondo livello è il dettaglio vero, e resta a un tocco
+ * perché la scelta precedente lo ha già filtrato.
+ *
+ * Un elenco piatto di quaranta voci costringerebbe a cercare ogni volta, ed è
+ * esattamente ciò che rende lenti i tracker manuali.
+ *
+ * [id] è una stringa stabile e leggibile ("casa.condominio") invece di un intero
+ * autoincrementale: le categorie finiscono nei backup e devono restare riconoscibili
+ * anche in un file aperto a mano, oltre che riconciliabili fra dispositivi diversi.
  *
  * [icon] e [colorArgb] sono dati, non risorse Android: il modulo :core non conosce
  * R.drawable. Lo strato UI mappa la chiave sull'icona effettiva.
@@ -18,115 +26,177 @@ data class Category(
     val id: String,
     val name: String,
     val kind: CategoryKind,
-    val group: String,
-    val icon: String,
+    /** null per le voci di primo livello; l'id del genitore per le sottocategorie. */
+    val parentId: String?,
+    /**
+     * Colore della voce. Le sottocategorie ereditano quello del genitore: nell'interfaccia
+     * i chip di dettaglio sono tinti col colore della categoria scelta, quindi tenerlo
+     * già risolto qui evita una risalita dell'albero a ogni disegno di riga.
+     */
     val colorArgb: Int,
+    /** Presente solo al primo livello: nella griglia le voci hanno un'icona, i chip no. */
+    val icon: String? = null,
+    /** Ordine di comparsa nella griglia, per frequenza d'uso attesa. */
+    val sortOrder: Int = 0,
     /** Le categorie di sistema non sono cancellabili, solo nascondibili. */
     val isSystem: Boolean = false,
     val hidden: Boolean = false,
 ) {
     val isExpense: Boolean get() = kind == CategoryKind.EXPENSE
     val isIncome: Boolean get() = kind == CategoryKind.INCOME
+    val isTopLevel: Boolean get() = parentId == null
 }
 
 /**
  * Categorie predefinite, tarate sulle voci di spesa di una famiglia italiana.
  *
- * Questa lista è il primo contatto dell'utente con l'app: se si ritrova subito
- * "Condominio", "Bollo auto" e "IMU" senza doverle creare, l'app sembra pensata per lui.
- * È il motivo per cui il taglio italiano non è un dettaglio di localizzazione.
+ * L'ordine del primo livello segue la frequenza d'uso attesa, non la parentela logica:
+ * spesa, bar e ristoranti stanno in cima perché sono ciò che si inserisce ogni giorno.
+ * Ordinare per tassonomia sarebbe più elegante e più lento da usare.
+ *
+ * Che ci si ritrovi subito "Condominio", "Bollo auto" e "IMU" senza doverle creare è il
+ * motivo per cui il taglio italiano non è un dettaglio di localizzazione.
  */
 object DefaultCategories {
 
-    // Palette segnaposto, da sostituire con i token del design definitivo.
-    private const val VERDE = 0xFF2E7D5B.toInt()
-    private const val BLU = 0xFF2F6FB0.toInt()
-    private const val VIOLA = 0xFF6C4FA3.toInt()
-    private const val ARANCIO = 0xFFC1662F.toInt()
-    private const val ROSSO = 0xFFB3453C.toInt()
-    private const val TEAL = 0xFF2E7D7D.toInt()
-    private const val OCRA = 0xFF9A7B2E.toInt()
-    private const val GRIGIO = 0xFF5B6670.toInt()
+    // Palette verificata su fondo chiaro e scuro: banda di luminosità, croma minimo,
+    // contrasto sulla superficie e separazione per deuteranopia e tritanopia.
+    private const val VERDE = 0xFF12A374.toInt()
+    private const val VIOLA = 0xFF8B5CF6.toInt()
+    private const val CORALLO = 0xFFE85545.toInt()
+    private const val CIANO = 0xFF0E93AE.toInt()
+    private const val AMBRA = 0xFFB07F0A.toInt()
+    private const val BLU = 0xFF3B7BE8.toInt()
+    private const val ROSA = 0xFFDB4F92.toInt()
+    private const val OLIVA = 0xFF6E9E2F.toInt()
+    private const val GRIGIO = 0xFF6B7A89.toInt()
 
-    val all: List<Category> = listOf(
-        // --- Casa -------------------------------------------------------------
-        expense("casa.affitto_mutuo", "Affitto e mutuo", "Casa", "home", BLU),
-        expense("casa.condominio", "Condominio", "Casa", "apartment", BLU),
-        expense("casa.bollette", "Bollette", "Casa", "bolt", BLU),
-        expense("casa.internet_telefono", "Internet e telefono", "Casa", "wifi", BLU),
-        expense("casa.manutenzione", "Manutenzione casa", "Casa", "build", BLU),
-        expense("casa.arredamento", "Arredamento", "Casa", "chair", BLU),
+    val all: List<Category> = buildList {
+        group("spesa", "Spesa", VERDE, "cart", 0) {
+            listOf("Supermercato", "Mercato", "Panetteria", "Alimentari", "Surgelati")
+        }
+        group("bar", "Bar", OLIVA, "coffee", 1) {
+            listOf("Colazione", "Caffè", "Aperitivo", "Gelateria")
+        }
+        group("ristoranti", "Ristoranti", CORALLO, "restaurant", 2) {
+            listOf("Pizzeria", "Trattoria", "Sushi", "Fast food", "Asporto")
+        }
+        group("trasporti", "Trasporti", AMBRA, "car", 3) {
+            listOf(
+                "Carburante", "Assicurazione", "Bollo auto", "Officina e revisione",
+                "Pedaggi e parcheggi", "Mezzi pubblici", "Taxi",
+            )
+        }
+        group("casa", "Casa", BLU, "building", 4) {
+            listOf("Affitto", "Mutuo", "Condominio", "Manutenzione", "Arredamento", "Pulizie")
+        }
+        group("bollette", "Bollette", VIOLA, "bolt", 5) {
+            listOf("Luce", "Gas", "Acqua", "Internet", "Telefono")
+        }
+        group("salute", "Salute", CIANO, "pill", 6) {
+            listOf("Farmacia", "Visite e analisi", "Dentista", "Occhiali e lenti")
+        }
+        group("shopping", "Shopping", ROSA, "bag", 7) {
+            listOf("Abbigliamento", "Scarpe", "Elettronica", "Cura personale", "Regali")
+        }
+        group("svago", "Svago", OLIVA, "ticket", 8) {
+            listOf(
+                "Cinema e concerti", "Libri", "Palestra e sport",
+                "Viaggi e vacanze", "Abbonamenti digitali",
+            )
+        }
+        group("tasse", "Tasse", CORALLO, "receipt", 9) {
+            listOf("IMU", "TARI", "Imposte sul reddito", "Commercialista", "Multe")
+        }
+        group("altro", "Altro", GRIGIO, "dots", 10) {
+            listOf(
+                "Animali domestici", "Scuola e istruzione", "Spese per i figli",
+                "Commissioni bancarie", "Rate e finanziamenti", "Donazioni",
+            )
+        }
+        group("entrate", "Entrate", VERDE, "wallet", 11, kind = CategoryKind.INCOME) {
+            listOf(
+                "Stipendio", "Lavoro autonomo", "Rimborsi",
+                "Bonus e sussidi", "Rendite e investimenti",
+            )
+        }
+    }
 
-        // --- Spesa quotidiana -------------------------------------------------
-        expense("spesa.alimentari", "Spesa alimentare", "Quotidiano", "cart", VERDE),
-        expense("spesa.bar", "Bar e colazioni", "Quotidiano", "coffee", VERDE),
-        expense("spesa.ristoranti", "Ristoranti", "Quotidiano", "restaurant", VERDE),
-        expense("spesa.tabacchi", "Tabacchi ed edicola", "Quotidiano", "newspaper", VERDE),
-
-        // --- Trasporti --------------------------------------------------------
-        expense("trasporti.carburante", "Carburante", "Trasporti", "fuel", ARANCIO),
-        expense("trasporti.mezzi", "Mezzi pubblici", "Trasporti", "train", ARANCIO),
-        expense("trasporti.pedaggi", "Pedaggi e parcheggi", "Trasporti", "toll", ARANCIO),
-        expense("trasporti.assicurazione", "Assicurazione veicolo", "Trasporti", "shield", ARANCIO),
-        expense("trasporti.bollo", "Bollo auto", "Trasporti", "receipt", ARANCIO),
-        expense("trasporti.manutenzione", "Officina e revisione", "Trasporti", "wrench", ARANCIO),
-
-        // --- Tasse e tributi --------------------------------------------------
-        expense("tasse.imu", "IMU", "Tasse e tributi", "account_balance", ROSSO),
-        expense("tasse.tari", "TARI", "Tasse e tributi", "delete", ROSSO),
-        expense("tasse.irpef", "Imposte sul reddito", "Tasse e tributi", "account_balance", ROSSO),
-        expense("tasse.commercialista", "Commercialista e consulenze", "Tasse e tributi", "gavel", ROSSO),
-        expense("tasse.altro", "Altri tributi", "Tasse e tributi", "account_balance", ROSSO),
-
-        // --- Salute -----------------------------------------------------------
-        expense("salute.farmacia", "Farmacia", "Salute", "pill", TEAL),
-        expense("salute.visite", "Visite e analisi", "Salute", "stethoscope", TEAL),
-        expense("salute.dentista", "Dentista", "Salute", "dental", TEAL),
-        expense("salute.occhiali", "Occhiali e lenti", "Salute", "glasses", TEAL),
-
-        // --- Persona e famiglia ----------------------------------------------
-        expense("persona.abbigliamento", "Abbigliamento", "Persona", "shirt", VIOLA),
-        expense("persona.cura", "Cura personale", "Persona", "spa", VIOLA),
-        expense("persona.istruzione", "Scuola e istruzione", "Persona", "school", VIOLA),
-        expense("persona.bambini", "Spese per i figli", "Persona", "child", VIOLA),
-        expense("persona.animali", "Animali domestici", "Persona", "pets", VIOLA),
-        expense("persona.regali", "Regali", "Persona", "gift", VIOLA),
-
-        // --- Tempo libero -----------------------------------------------------
-        expense("svago.abbonamenti", "Abbonamenti digitali", "Tempo libero", "subscriptions", OCRA),
-        expense("svago.palestra", "Sport e palestra", "Tempo libero", "fitness", OCRA),
-        expense("svago.cultura", "Cinema, libri e concerti", "Tempo libero", "movie", OCRA),
-        expense("svago.viaggi", "Viaggi e vacanze", "Tempo libero", "flight", OCRA),
-
-        // --- Finanza ----------------------------------------------------------
-        expense("finanza.commissioni", "Commissioni bancarie", "Finanza", "bank", GRIGIO),
-        expense("finanza.rate", "Rate e finanziamenti", "Finanza", "credit_card", GRIGIO),
-        expense("finanza.risparmio", "Accantonamenti", "Finanza", "savings", GRIGIO),
-        expense("finanza.beneficenza", "Donazioni", "Finanza", "volunteer", GRIGIO),
-
-        expense("altro", "Altro", "Altro", "more", GRIGIO),
-
-        // --- Entrate ----------------------------------------------------------
-        income("entrate.stipendio", "Stipendio", "Entrate", "wallet", VERDE),
-        income("entrate.autonomo", "Lavoro autonomo", "Entrate", "briefcase", VERDE),
-        income("entrate.rimborsi", "Rimborsi", "Entrate", "undo", VERDE),
-        income("entrate.bonus", "Bonus e sussidi", "Entrate", "star", VERDE),
-        income("entrate.investimenti", "Rendite e investimenti", "Entrate", "trending_up", VERDE),
-        income("entrate.altro", "Altre entrate", "Entrate", "more", VERDE),
-    )
+    /** Le voci della griglia, nell'ordine in cui vanno disposte. */
+    val topLevel: List<Category> = all.filter { it.isTopLevel }.sortedBy { it.sortOrder }
 
     val expenses: List<Category> get() = all.filter { it.isExpense }
     val incomes: List<Category> get() = all.filter { it.isIncome }
 
     /** Categoria di ripiego quando l'import non riesce ad attribuirne una. */
-    val fallbackExpense: Category get() = all.first { it.id == "altro" }
-    val fallbackIncome: Category get() = all.first { it.id == "entrate.altro" }
+    val fallbackExpense: Category get() = byId("altro")!!
+    val fallbackIncome: Category get() = byId("entrate")!!
 
-    fun byId(id: String): Category? = all.firstOrNull { it.id == id }
+    private val index: Map<String, Category> = all.associateBy { it.id }
 
-    private fun expense(id: String, name: String, group: String, icon: String, color: Int) =
-        Category(id, name, CategoryKind.EXPENSE, group, icon, color, isSystem = true)
+    fun byId(id: String): Category? = index[id]
 
-    private fun income(id: String, name: String, group: String, icon: String, color: Int) =
-        Category(id, name, CategoryKind.INCOME, group, icon, color, isSystem = true)
+    /** Le sottocategorie di una voce di primo livello, nell'ordine di dichiarazione. */
+    fun childrenOf(parentId: String): List<Category> = all.filter { it.parentId == parentId }
+
+    /** Risale al primo livello, per aggregare le statistiche per categoria principale. */
+    fun rootOf(id: String): Category? {
+        val category = byId(id) ?: return null
+        return if (category.isTopLevel) category else byId(category.parentId!!)
+    }
+
+    /**
+     * Dichiara una voce di primo livello e le sue sottocategorie in un colpo solo.
+     * Gli id dei figli derivano dal nome, così restano leggibili in un file di backup.
+     */
+    private fun MutableList<Category>.group(
+        id: String,
+        name: String,
+        color: Int,
+        icon: String,
+        sortOrder: Int,
+        kind: CategoryKind = CategoryKind.EXPENSE,
+        children: () -> List<String>,
+    ) {
+        add(
+            Category(
+                id = id,
+                name = name,
+                kind = kind,
+                parentId = null,
+                colorArgb = color,
+                icon = icon,
+                sortOrder = sortOrder,
+                isSystem = true,
+            )
+        )
+        children().forEachIndexed { i, childName ->
+            add(
+                Category(
+                    id = "$id.${slug(childName)}",
+                    name = childName,
+                    kind = kind,
+                    parentId = id,
+                    colorArgb = color,
+                    icon = null,
+                    sortOrder = i,
+                    isSystem = true,
+                )
+            )
+        }
+    }
+
+    private fun slug(name: String): String = buildString {
+        for (ch in name.lowercase()) {
+            when {
+                ch.isLetterOrDigit() && ch.code < 128 -> append(ch)
+                ch in "àáâä" -> append('a')
+                ch in "èéêë" -> append('e')
+                ch in "ìíîï" -> append('i')
+                ch in "òóôö" -> append('o')
+                ch in "ùúûü" -> append('u')
+                isNotEmpty() && last() != '_' -> append('_')
+            }
+        }
+    }.trim('_')
 }
