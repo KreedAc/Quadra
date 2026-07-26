@@ -1,0 +1,1333 @@
+<title>LeMieSpese — bozza visiva</title>
+
+<style>
+  /* ============================================================
+     TOKEN DELLA PAGINA (si adattano al tema di chi guarda)
+     ============================================================ */
+  :root {
+    --page-bg: #F2F4F7;
+    --page-bg-2: #E7EBF0;
+    --page-fg: #131A22;
+    --page-muted: #5D6B7A;
+    --page-card: #FFFFFF;
+    --page-line: #D6DDE5;
+    --page-glow: 0.22;
+
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                    "Segoe UI Variable Display", system-ui, "Roboto", sans-serif;
+    --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+               "Segoe UI Variable Text", system-ui, "Roboto", sans-serif;
+    --font-mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono",
+                 Menlo, Consolas, monospace;
+
+    /* Gradiente identitario — blu che vira al verde. */
+    --brand-a: #2F6BFF;
+    --brand-b: #1FD8A4;
+
+    /* Palette categorie, validata su fondo chiaro e scuro. */
+    --cat-verde:   #12A374;
+    --cat-viola:   #8B5CF6;
+    --cat-corallo: #E85545;
+    --cat-ciano:   #0E93AE;
+    --cat-ambra:   #B07F0A;
+    --cat-blu:     #3B7BE8;
+    --cat-rosa:    #DB4F92;
+    --cat-oliva:   #6E9E2F;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-bg: #070B10;
+      --page-bg-2: #0B1119;
+      --page-fg: #E8EEF5;
+      --page-muted: #8494A5;
+      --page-card: #111A23;
+      --page-line: #1F2C39;
+      --page-glow: 0.55;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #070B10;
+    --page-bg-2: #0B1119;
+    --page-fg: #E8EEF5;
+    --page-muted: #8494A5;
+    --page-card: #111A23;
+    --page-line: #1F2C39;
+    --page-glow: 0.55;
+  }
+  :root[data-theme="light"] {
+    --page-bg: #F2F4F7;
+    --page-bg-2: #E7EBF0;
+    --page-fg: #131A22;
+    --page-muted: #5D6B7A;
+    --page-card: #FFFFFF;
+    --page-line: #D6DDE5;
+    --page-glow: 0.22;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Alone ambientale: gli schermi illuminano la stanza. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -20vh -10vw;
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--page-glow);
+    background:
+      radial-gradient(46vw 40vh at 22% 28%, color-mix(in oklab, var(--brand-a) 55%, transparent), transparent 68%),
+      radial-gradient(42vw 38vh at 78% 34%, color-mix(in oklab, var(--brand-b) 45%, transparent), transparent 66%),
+      radial-gradient(60vw 46vh at 50% 88%, color-mix(in oklab, var(--brand-a) 26%, transparent), transparent 72%);
+    filter: blur(28px);
+    animation: drift 34s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    from { transform: translate3d(-2%, -1%, 0) scale(1); }
+    to   { transform: translate3d(2%, 2%, 0) scale(1.06); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body::before { animation: none; }
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: clamp(40px, 7vw, 88px) clamp(20px, 4vw, 40px) 96px;
+  }
+
+  /* ---------- Intestazione ---------- */
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--page-muted);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(34px, 5.2vw, 54px);
+    line-height: 1.06;
+    letter-spacing: -0.028em;
+    font-weight: 700;
+    margin: 0 0 18px;
+    text-wrap: balance;
+    max-width: 16ch;
+  }
+  h1 .grad {
+    background: linear-gradient(104deg, var(--brand-a), var(--brand-b));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .lede {
+    font-size: clamp(16px, 1.5vw, 18.5px);
+    color: var(--page-muted);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  /* ---------- Sezioni ---------- */
+  section { margin-top: clamp(56px, 8vw, 96px); }
+
+  h2 {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 2.6vw, 28px);
+    letter-spacing: -0.02em;
+    font-weight: 660;
+    margin: 0 0 8px;
+  }
+  .sub {
+    color: var(--page-muted);
+    margin: 0 0 34px;
+    max-width: 68ch;
+    font-size: 15.5px;
+  }
+
+  /* ---------- Griglia dei dispositivi ---------- */
+  .devices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: clamp(28px, 4vw, 52px);
+    justify-items: center;
+    align-items: start;
+  }
+  .device-cell { max-width: 360px; }
+  .caption { margin: 24px 2px 0; }
+  .caption h3 {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 640;
+    letter-spacing: -0.012em;
+    margin: 0 0 6px;
+  }
+  .caption p {
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--page-muted);
+  }
+
+  /* ============================================================
+     IL TELEFONO
+     ============================================================ */
+  .phone {
+    --screen:   #0D141C;
+    --card:     #141E28;
+    --raised:   #1C2836;
+    --hairline: #24313F;
+    --ink-hi:   #E8EEF5;
+    --ink-mid:  #A8B6C4;
+    --ink-lo:   #7B8998;
+
+    width: 100%;
+    max-width: 340px;
+    aspect-ratio: 340 / 726;
+    border-radius: 46px;
+    padding: 11px;
+    background: linear-gradient(160deg, #2A3542, #10161D 42%, #222C38);
+    box-shadow:
+      0 2px 3px rgba(0, 0, 0, 0.5),
+      0 34px 70px -26px rgba(0, 0, 0, 0.85),
+      0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  }
+  .phone--light {
+    --screen:   #F5F7FA;
+    --card:     #FFFFFF;
+    --raised:   #ECEFF4;
+    --hairline: #DDE3EA;
+    --ink-hi:   #101822;
+    --ink-mid:  #4A5866;
+    --ink-lo:   #6F7D8C;
+  }
+
+  .screen {
+    height: 100%;
+    border-radius: 36px;
+    overflow: hidden;
+    background: var(--screen);
+    color: var(--ink-hi);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    font-size: 14px;
+  }
+
+  /* ---------- Barra di stato ---------- */
+  .statusbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 22px 4px;
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--ink-hi);
+    flex: none;
+  }
+  .statusbar .icons { display: flex; align-items: center; gap: 5px; }
+  .bars { display: flex; align-items: flex-end; gap: 1.5px; height: 10px; }
+  .bars i {
+    display: block; width: 2.5px; background: currentColor;
+    border-radius: 1px; opacity: 0.95;
+  }
+  .bars i:nth-child(1) { height: 4px; }
+  .bars i:nth-child(2) { height: 6px; }
+  .bars i:nth-child(3) { height: 8px; }
+  .bars i:nth-child(4) { height: 10px; }
+  .batt {
+    width: 22px; height: 11px; border-radius: 3px;
+    border: 1.2px solid currentColor; opacity: 0.9;
+    position: relative; padding: 1.4px;
+  }
+  .batt::after {
+    content: ""; position: absolute; right: -3px; top: 3.4px;
+    width: 1.6px; height: 4px; border-radius: 0 1px 1px 0; background: currentColor;
+  }
+  .batt span { display: block; height: 100%; width: 72%; border-radius: 1.4px; background: currentColor; }
+
+  /* ---------- Corpo scorrevole ---------- */
+  .body {
+    flex: 1;
+    overflow: hidden;
+    padding: 4px 18px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .apptop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+  }
+  .month {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-display);
+    font-size: 21px; font-weight: 700; letter-spacing: -0.02em;
+  }
+  .month svg { opacity: 0.5; }
+  .iconbtn {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--raised); color: var(--ink-mid);
+  }
+
+  /* ---------- Scheda saldo (unico uso del gradiente identitario) ---------- */
+  .balance {
+    border-radius: 24px;
+    padding: 19px 20px 18px;
+    background:
+      linear-gradient(150deg,
+        color-mix(in oklab, var(--brand-a) 20%, var(--card)),
+        color-mix(in oklab, var(--brand-b) 13%, var(--card)) 96%);
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--brand-a) 26%, transparent) inset;
+  }
+  .balance .lbl {
+    font-size: 12.5px; font-weight: 500; letter-spacing: 0.02em;
+    color: var(--ink-mid); margin-bottom: 7px;
+  }
+  .amount-xl {
+    font-family: var(--font-display);
+    font-size: 38px; font-weight: 700;
+    letter-spacing: -0.032em; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .amount-xl .cur { font-size: 24px; font-weight: 500; opacity: 0.62; margin-left: 3px; }
+
+  .track {
+    margin-top: 16px; height: 6px; border-radius: 99px;
+    background: color-mix(in oklab, var(--ink-hi) 13%, transparent);
+    overflow: hidden;
+  }
+  .track i {
+    display: block; height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--brand-a), var(--brand-b));
+  }
+  .track-legend {
+    display: flex; justify-content: space-between;
+    margin-top: 9px; font-size: 12.5px; color: var(--ink-mid);
+    font-variant-numeric: tabular-nums;
+  }
+  .track-legend b { color: var(--ink-hi); font-weight: 700; }
+
+  /* ---------- Striscia "in arrivo" ---------- */
+  .upcoming {
+    display: flex; align-items: center; gap: 11px;
+    padding: 12px 14px; border-radius: 17px;
+    background: var(--card);
+    box-shadow: 0 0 0 1px var(--hairline) inset;
+  }
+  .upcoming .txt { flex: 1; min-width: 0; }
+  .upcoming .t1 { display: block; font-size: 13.5px; font-weight: 500; }
+  .upcoming .t2 { display: block; font-size: 12px; color: var(--ink-lo); }
+  .upcoming .val { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Elenco movimenti ---------- */
+  .daybar {
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-size: 12.5px; color: var(--ink-lo);
+    margin-bottom: 2px;
+  }
+  .daybar b { font-weight: 500; color: var(--ink-mid); }
+  .daybar span { font-variant-numeric: tabular-nums; }
+
+  .rows { display: flex; flex-direction: column; }
+  .row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .row:last-child { border-bottom: 0; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 12px;
+    display: grid; place-items: center; flex: none;
+  }
+  .row .txt { flex: 1; min-width: 0; }
+  .row .t1 {
+    display: block;
+    font-size: 14.5px; font-weight: 500; letter-spacing: -0.005em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .row .t2 {
+    font-size: 12px; color: var(--ink-lo);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .row .val {
+    font-size: 15px; font-weight: 700;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.015em;
+    flex: none;
+  }
+  .val--in { color: var(--cat-verde); }
+
+  .chip-mini {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 1px 6px 1px 4px; border-radius: 99px;
+    background: var(--raised); color: var(--ink-mid);
+    font-size: 10.5px; font-weight: 500;
+  }
+
+  /* ---------- Navigazione ---------- */
+  .nav {
+    flex: none;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: center;
+    padding: 9px 12px 20px;
+    background: color-mix(in oklab, var(--screen) 82%, var(--card));
+    border-top: 1px solid var(--hairline);
+    position: relative;
+  }
+  .nav a {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: var(--ink-lo); text-decoration: none;
+    font-size: 10px; font-weight: 500;
+  }
+  .nav a.on { color: var(--brand-b); }
+  .fab {
+    position: absolute;
+    right: 18px; top: -62px;
+    width: 56px; height: 56px; border-radius: 19px;
+    display: grid; place-items: center;
+    background: linear-gradient(142deg, var(--brand-a), var(--brand-b));
+    color: #04121A;
+    box-shadow: 0 12px 26px -8px color-mix(in oklab, var(--brand-a) 70%, transparent);
+  }
+
+  /* ============================================================
+     SCHERMATA 2 — inserimento rapido
+     ============================================================ */
+  .dimmed { filter: saturate(0.7) brightness(0.42); }
+  .sheet {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: var(--card);
+    border-radius: 30px 30px 36px 36px;
+    padding: 10px 18px 22px;
+    box-shadow: 0 -20px 50px -18px rgba(0, 0, 0, 0.8);
+    display: flex; flex-direction: column; gap: 13px;
+  }
+  .grabber {
+    width: 38px; height: 4px; border-radius: 99px;
+    background: var(--hairline); margin: 0 auto 2px;
+  }
+  .entry-amount {
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 46px; font-weight: 700;
+    letter-spacing: -0.035em; line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+    padding: 2px 0 0;
+  }
+  .entry-amount .cur { font-size: 27px; font-weight: 400; opacity: 0.5; margin-left: 4px; }
+  .caret {
+    display: inline-block; width: 2px; height: 34px;
+    background: var(--brand-b); vertical-align: -5px;
+    margin-left: 2px; border-radius: 2px;
+  }
+  .entry-meta {
+    display: flex; justify-content: center; gap: 7px;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 11px; border-radius: 99px;
+    background: var(--raised); color: var(--ink-mid);
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+  }
+  .cats {
+    display: flex; gap: 7px; overflow: hidden;
+    padding-bottom: 1px;
+  }
+  .cat {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px 7px 8px; border-radius: 99px;
+    background: var(--raised); color: var(--ink-mid);
+    font-size: 12.5px; font-weight: 500; white-space: nowrap; flex: none;
+  }
+  .cat.on {
+    background: color-mix(in oklab, var(--cat-verde) 22%, var(--card));
+    color: var(--ink-hi);
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--cat-verde) 55%, transparent) inset;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+  }
+  .key {
+    height: 44px; border-radius: 15px;
+    display: grid; place-items: center;
+    background: var(--raised);
+    font-family: var(--font-display);
+    font-size: 20px; font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-hi);
+  }
+  .key--soft { background: transparent; color: var(--ink-mid); }
+  .cta {
+    height: 50px; border-radius: 17px;
+    display: grid; place-items: center;
+    background: linear-gradient(100deg, var(--brand-a), var(--brand-b));
+    color: #04121A;
+    font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
+  }
+
+  /* ============================================================
+     SCHERMATA 3 — statistiche
+     ============================================================ */
+  .stat-hero { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+  .delta {
+    font-size: 12.5px; font-weight: 700;
+    padding: 2px 8px; border-radius: 99px;
+    background: color-mix(in oklab, var(--cat-verde) 20%, transparent);
+    color: var(--cat-verde);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chart {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    align-items: end;
+    gap: 8px;
+    height: 116px;
+    padding-top: 18px;
+    position: relative;
+  }
+  .chart::before {
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: 21px;
+    border-top: 1px dashed var(--hairline);
+  }
+  .bar { display: flex; flex-direction: column; align-items: center; gap: 7px; height: 100%; justify-content: flex-end; }
+  .bar i {
+    display: block; width: 100%; max-width: 26px;
+    border-radius: 4px 4px 2px 2px;
+    background: color-mix(in oklab, var(--brand-a) 30%, var(--card));
+  }
+  .bar.on i { background: linear-gradient(178deg, var(--brand-b), var(--brand-a)); }
+  .bar em {
+    font-style: normal; font-size: 10.5px; color: var(--ink-lo);
+    letter-spacing: 0.02em;
+  }
+  .bar.on em { color: var(--ink-hi); font-weight: 700; }
+  .bar-value {
+    font-size: 10.5px; font-weight: 700; color: var(--ink-hi);
+    font-variant-numeric: tabular-nums; margin-bottom: -2px;
+  }
+
+  .breakdown { display: flex; flex-direction: column; gap: 13px; }
+  .bd-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+  .bd-name {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13.5px; font-weight: 500;
+  }
+  .bd-val {
+    font-size: 13.5px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .bd-track {
+    grid-column: 1 / -1;
+    height: 6px; border-radius: 99px;
+    background: color-mix(in oklab, var(--ink-hi) 9%, transparent);
+    overflow: hidden;
+  }
+  .bd-track i { display: block; height: 100%; border-radius: 99px; }
+
+  /* ============================================================
+     CONSEGNA DEI TOKEN
+     ============================================================ */
+  .panel {
+    background: var(--page-card);
+    border: 1px solid var(--page-line);
+    border-radius: 20px;
+    padding: clamp(20px, 3vw, 30px);
+  }
+  .panel + .panel { margin-top: 18px; }
+  .panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px; font-weight: 640;
+    letter-spacing: 0.01em;
+    margin: 0 0 4px;
+  }
+  .panel .hint {
+    font-size: 13.5px; color: var(--page-muted); margin: 0 0 20px; max-width: 70ch;
+  }
+
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+    gap: 12px;
+  }
+  .sw {
+    border: 1px solid var(--page-line);
+    border-radius: 13px;
+    overflow: hidden;
+  }
+  .sw .chipcolor { height: 46px; }
+  .sw .meta { padding: 9px 11px 10px; }
+  .sw .nm { font-size: 12.5px; font-weight: 600; letter-spacing: -0.005em; }
+  .sw .hex {
+    font-family: var(--font-mono);
+    font-size: 11.5px; color: var(--page-muted);
+    letter-spacing: -0.01em;
+  }
+  .sw .role { font-size: 11px; color: var(--page-muted); }
+
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--page-line); }
+  th {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--page-muted); font-weight: 620;
+  }
+  td.mono, th.mono { font-family: var(--font-mono); font-size: 12.5px; }
+  td.num { font-variant-numeric: tabular-nums; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .specimen { font-family: var(--font-display); letter-spacing: -0.02em; line-height: 1.15; }
+
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+  .note h4 {
+    font-family: var(--font-display);
+    font-size: 14.5px; font-weight: 640; margin: 0 0 5px;
+  }
+  .note p { margin: 0; font-size: 14px; color: var(--page-muted); line-height: 1.6; }
+
+  footer {
+    margin-top: 72px; padding-top: 26px;
+    border-top: 1px solid var(--page-line);
+    font-size: 13.5px; color: var(--page-muted);
+    max-width: 72ch;
+  }
+
+  a:focus-visible, .sw:focus-visible {
+    outline: 2px solid var(--brand-b);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+</style>
+
+<!-- Icone: un solo sprite, riusato ovunque. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <g id="i-base" fill="none" stroke="currentColor" stroke-width="1.7"
+       stroke-linecap="round" stroke-linejoin="round"></g>
+  </defs>
+  <symbol id="ic-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.5 4h2.1l2.3 9.9a1.6 1.6 0 0 0 1.6 1.2h7.7a1.6 1.6 0 0 0 1.6-1.2L19.4 8H5.6"/>
+    <circle cx="9.2" cy="19" r="1.3"/><circle cx="16.6" cy="19" r="1.3"/>
+  </symbol>
+  <symbol id="ic-fuel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 20.5V5.6A1.6 1.6 0 0 1 5.6 4h5.6a1.6 1.6 0 0 1 1.6 1.6v14.9"/>
+    <path d="M2.8 20.5h11.2M6.4 8.4h4.4"/>
+    <path d="M12.8 10.4h3.4a1.6 1.6 0 0 1 1.6 1.6v4.6a1.5 1.5 0 0 0 3 0V8.4l-2.4-2.4"/>
+  </symbol>
+  <symbol id="ic-coffee" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 8.6h11.2v5.9a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4Z"/>
+    <path d="M15.2 9.9h2.4a2.4 2.4 0 0 1 0 4.8h-2.4"/>
+    <path d="M7 3.2v2.1M10.4 3.2v2.1M13.8 3.2v2.1"/>
+  </symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.6" y="4.4" width="18.8" height="13.4" rx="2.6"/>
+    <path d="M8.4 21.2h7.2"/><path d="M10.6 9.4l3.8 2.1-3.8 2.1Z"/>
+  </symbol>
+  <symbol id="ic-pill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.2" y="8.4" width="19.6" height="7.2" rx="3.6" transform="rotate(-45 12 12)"/>
+    <path d="M9.1 9.1l5.8 5.8"/>
+  </symbol>
+  <symbol id="ic-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.6 20.6V4.6a1 1 0 0 1 1-1h7.6a1 1 0 0 1 1 1v16"/>
+    <path d="M13.2 10.2h5.6a1 1 0 0 1 1 1v9.4"/><path d="M2.4 20.6h19.2"/>
+    <path d="M6.6 7.4h3.4M6.6 11.2h3.4M6.6 15h3.4M16 14h1.4M16 17.2h1.4"/>
+  </symbol>
+  <symbol id="ic-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M13.4 2.6 5.2 13.2h5.8l-1.4 8.2 8.2-10.6h-5.8Z"/>
+  </symbol>
+  <symbol id="ic-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 6.4h16M4 12h16M4 17.6h11"/>
+  </symbol>
+  <symbol id="ic-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 20V11M12 20V4.6M19 20v-6.2"/>
+  </symbol>
+  <symbol id="ic-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.6 9.2A6.4 6.4 0 0 1 10 4h7.4"/><path d="m14.8 1.6 2.8 2.4-2.8 2.4"/>
+    <path d="M20.4 14.8A6.4 6.4 0 0 1 14 20H6.6"/><path d="m9.2 22.4-2.8-2.4 2.8-2.4"/>
+  </symbol>
+  <symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.4 6.6h8.2M17.2 6.6h3.4M3.4 12h3.4M12.6 12h8M3.4 17.4h8.2M17.2 17.4h3.4"/>
+    <circle cx="14.4" cy="6.6" r="2.2"/><circle cx="9.6" cy="12" r="2.2"/><circle cx="14.4" cy="17.4" r="2.2"/>
+  </symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+    <path d="M12 5.4v13.2M5.4 12h13.2"/>
+  </symbol>
+  <symbol id="ic-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m7.4 9.8 4.6 4.4 4.6-4.4"/>
+  </symbol>
+  <symbol id="ic-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 6.4 8.6 12l5.4 5.6"/>
+  </symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="10.8" cy="10.8" r="6.2"/><path d="m15.6 15.6 4 4"/>
+  </symbol>
+  <symbol id="ic-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20.4 9.2V6.8a1.6 1.6 0 0 0-1.6-1.6H4.8A1.6 1.6 0 0 0 3.2 6.8v10.4a1.6 1.6 0 0 0 1.6 1.6h14a1.6 1.6 0 0 0 1.6-1.6v-2.4"/>
+    <path d="M21.6 9.2h-4.4a2.4 2.4 0 0 0 0 4.8h4.4Z"/>
+  </symbol>
+  <symbol id="ic-back-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 5.8H9.4L3.4 12l6 6.2H20a1.4 1.4 0 0 0 1.4-1.4V7.2A1.4 1.4 0 0 0 20 5.8Z"/>
+    <path d="m11.6 9.8 5 4.4M16.6 9.8l-5 4.4"/>
+  </symbol>
+</svg>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Bozza visiva · versione 1</p>
+    <h1>Le spese, <span class="grad">al buio</span>, in tre tocchi.</h1>
+    <p class="lede">
+      Prima proposta per LeMieSpese. Tema scuro come condizione d'uso principale, non come
+      variante: l'app si apre la sera, spesso a letto, spesso con una mano sola. Da lì
+      discendono le tre decisioni che questa bozza mette alla prova — il numero che conta
+      sta in alto, l'azione sta sotto il pollice, e il colore compare solo quando significa
+      qualcosa.
+    </p>
+  </header>
+
+  <section>
+    <h2>Le tre schermate che decidono tutto</h2>
+    <p class="sub">
+      Il resto dell'app discende da queste. Sono disegnate a misura di telefono (412&nbsp;dp)
+      e usano solo componenti che hanno una corrispondenza diretta in Jetpack Compose.
+    </p>
+
+    <div class="devices">
+
+      <!-- ══════════════ SCHERMATA 1 — HOME ══════════════ -->
+      <div class="device-cell">
+        <div class="phone">
+          <div class="screen">
+
+            <div class="statusbar">
+              <span>21:47</span>
+              <span class="icons">
+                <span class="bars"><i></i><i></i><i></i><i></i></span>
+                <span class="batt"><span></span></span>
+              </span>
+            </div>
+
+            <div class="body">
+
+              <div class="apptop">
+                <span class="month">
+                  Luglio 2026
+                  <svg width="17" height="17"><use href="#ic-chevron"/></svg>
+                </span>
+                <span class="iconbtn">
+                  <svg width="16" height="16"><use href="#ic-search"/></svg>
+                </span>
+              </div>
+
+              <div class="balance">
+                <div class="lbl">Speso questo mese</div>
+                <div class="amount-xl">1.284,60<span class="cur">€</span></div>
+                <div class="track"><i style="width:71.4%"></i></div>
+                <div class="track-legend">
+                  <span>Restano <b>515,40 €</b></span>
+                  <span>su 1.800,00 €</span>
+                </div>
+              </div>
+
+              <div class="upcoming">
+                <span class="avatar" style="background:color-mix(in oklab, var(--cat-blu) 20%, transparent); color:var(--cat-blu)">
+                  <svg width="18" height="18"><use href="#ic-building"/></svg>
+                </span>
+                <span class="txt">
+                  <span class="t1">Condominio</span>
+                  <span class="t2">In arrivo martedì 28</span>
+                </span>
+                <span class="val">145,00 €</span>
+              </div>
+
+              <div>
+                <div class="daybar"><b>Oggi</b><span>113,20 €</span></div>
+                <div class="rows">
+                  <div class="row">
+                    <span class="avatar" style="background:color-mix(in oklab, var(--cat-verde) 20%, transparent); color:var(--cat-verde)">
+                      <svg width="18" height="18"><use href="#ic-cart"/></svg>
+                    </span>
+                    <span class="txt">
+                      <span class="t1">Esselunga</span>
+                      <span class="t2">Spesa alimentare</span>
+                    </span>
+                    <span class="val">47,80 €</span>
+                  </div>
+                  <div class="row">
+                    <span class="avatar" style="background:color-mix(in oklab, var(--cat-ambra) 22%, transparent); color:var(--cat-ambra)">
+                      <svg width="18" height="18"><use href="#ic-fuel"/></svg>
+                    </span>
+                    <span class="txt">
+                      <span class="t1">Q8 Tangenziale</span>
+                      <span class="t2">Carburante</span>
+                    </span>
+                    <span class="val">62,00 €</span>
+                  </div>
+                  <div class="row">
+                    <span class="avatar" style="background:color-mix(in oklab, var(--cat-verde) 20%, transparent); color:var(--cat-verde)">
+                      <svg width="18" height="18"><use href="#ic-coffee"/></svg>
+                    </span>
+                    <span class="txt">
+                      <span class="t1">Bar Centrale</span>
+                      <span class="t2">Bar e colazioni</span>
+                    </span>
+                    <span class="val">3,40 €</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <nav class="nav">
+              <span class="fab"><svg width="24" height="24"><use href="#ic-plus"/></svg></span>
+              <a href="#" class="on"><svg width="21" height="21"><use href="#ic-list"/></svg>Movimenti</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-chart"/></svg>Statistiche</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-repeat"/></svg>Ricorrenti</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-gear"/></svg>Impostazioni</a>
+            </nav>
+
+          </div>
+        </div>
+        <div class="caption">
+          <h3>Il numero che conta, per primo</h3>
+          <p>
+            Quanto ho speso e quanto mi resta, senza scorrere. Sotto, la prossima ricorrente
+            in arrivo: è l'app che ti avvisa prima che il condominio ti sorprenda. Il
+            gradiente identitario compare qui e solo qui.
+          </p>
+        </div>
+      </div>
+
+      <!-- ══════════════ SCHERMATA 2 — INSERIMENTO ══════════════ -->
+      <div class="device-cell">
+        <div class="phone">
+          <div class="screen">
+
+            <div class="statusbar">
+              <span>21:48</span>
+              <span class="icons">
+                <span class="bars"><i></i><i></i><i></i><i></i></span>
+                <span class="batt"><span></span></span>
+              </span>
+            </div>
+
+            <div class="body dimmed">
+              <div class="apptop">
+                <span class="month">Luglio 2026
+                  <svg width="17" height="17"><use href="#ic-chevron"/></svg>
+                </span>
+              </div>
+              <div class="balance">
+                <div class="lbl">Speso questo mese</div>
+                <div class="amount-xl">1.284,60<span class="cur">€</span></div>
+                <div class="track"><i style="width:71.4%"></i></div>
+              </div>
+              <div class="rows">
+                <div class="row">
+                  <span class="avatar" style="background:color-mix(in oklab, var(--cat-verde) 20%, transparent)"></span>
+                  <span class="txt"><span class="t1">Esselunga</span></span>
+                  <span class="val">47,80 €</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="sheet">
+              <span class="grabber"></span>
+
+              <div class="entry-amount">12,80<span class="caret"></span><span class="cur">€</span></div>
+
+              <div class="entry-meta">
+                <span class="chip">Oggi · 26 lug</span>
+                <span class="chip">Aggiungi nota</span>
+              </div>
+
+              <div class="cats">
+                <span class="cat on">
+                  <span class="dot" style="background:var(--cat-verde)"></span>Spesa
+                </span>
+                <span class="cat">
+                  <span class="dot" style="background:var(--cat-ambra)"></span>Carburante
+                </span>
+                <span class="cat">
+                  <span class="dot" style="background:var(--cat-blu)"></span>Casa
+                </span>
+                <span class="cat">
+                  <span class="dot" style="background:var(--cat-ciano)"></span>Salute
+                </span>
+              </div>
+
+              <div class="keypad">
+                <span class="key">1</span><span class="key">2</span><span class="key">3</span>
+                <span class="key">4</span><span class="key">5</span><span class="key">6</span>
+                <span class="key">7</span><span class="key">8</span><span class="key">9</span>
+                <span class="key key--soft">,</span>
+                <span class="key">0</span>
+                <span class="key key--soft"><svg width="21" height="21"><use href="#ic-back-key"/></svg></span>
+              </div>
+
+              <div class="cta">Salva</div>
+            </div>
+
+          </div>
+        </div>
+        <div class="caption">
+          <h3>Tre tocchi, poi è finita</h3>
+          <p>
+            Importo, categoria, salva. Tastierino grande e disegnato da noi — quella di
+            sistema è lenta e sbagliata per i numeri. Tutto quello che si tocca sta nella
+            metà bassa, raggiungibile col pollice senza spostare la mano.
+          </p>
+        </div>
+      </div>
+
+      <!-- ══════════════ SCHERMATA 3 — STATISTICHE ══════════════ -->
+      <div class="device-cell">
+        <div class="phone">
+          <div class="screen">
+
+            <div class="statusbar">
+              <span>21:49</span>
+              <span class="icons">
+                <span class="bars"><i></i><i></i><i></i><i></i></span>
+                <span class="batt"><span></span></span>
+              </span>
+            </div>
+
+            <div class="body">
+
+              <div class="apptop">
+                <span class="month">
+                  <svg width="19" height="19" style="opacity:.55"><use href="#ic-back"/></svg>
+                  Statistiche
+                </span>
+              </div>
+
+              <div>
+                <div class="lbl" style="font-size:12.5px;color:var(--ink-mid);margin-bottom:5px">
+                  Spesa mensile
+                </div>
+                <div class="stat-hero">
+                  <span class="amount-xl" style="font-size:31px">1.284,60<span class="cur" style="font-size:20px">€</span></span>
+                  <span class="delta">−62,40 sul mese scorso</span>
+                </div>
+
+                <!-- Serie unica: nessuna legenda, il titolo la nomina.
+                     Etichetta diretta solo sulla barra in evidenza. -->
+                <div class="chart">
+                  <span class="bar"><i style="height:56%"></i><em>feb</em></span>
+                  <span class="bar"><i style="height:51%"></i><em>mar</em></span>
+                  <span class="bar"><i style="height:60%"></i><em>apr</em></span>
+                  <span class="bar"><i style="height:47%"></i><em>mag</em></span>
+                  <span class="bar"><i style="height:53%"></i><em>giu</em></span>
+                  <span class="bar on">
+                    <span class="bar-value">1.284</span>
+                    <i style="height:51%"></i><em>lug</em>
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <div class="daybar" style="margin-bottom:12px">
+                  <b>Per categoria</b><span>6 voci</span>
+                </div>
+                <div class="breakdown">
+                  <div class="bd-row">
+                    <span class="bd-name"><span class="dot" style="background:var(--cat-blu)"></span>Casa</span>
+                    <span class="bd-val">486,00 €</span>
+                    <span class="bd-track"><i style="width:100%;background:var(--cat-blu)"></i></span>
+                  </div>
+                  <div class="bd-row">
+                    <span class="bd-name"><span class="dot" style="background:var(--cat-verde)"></span>Spesa alimentare</span>
+                    <span class="bd-val">312,40 €</span>
+                    <span class="bd-track"><i style="width:64%;background:var(--cat-verde)"></i></span>
+                  </div>
+                  <div class="bd-row">
+                    <span class="bd-name"><span class="dot" style="background:var(--cat-ambra)"></span>Trasporti</span>
+                    <span class="bd-val">186,20 €</span>
+                    <span class="bd-track"><i style="width:38%;background:var(--cat-ambra)"></i></span>
+                  </div>
+                  <div class="bd-row">
+                    <span class="bd-name"><span class="dot" style="background:var(--cat-ciano)"></span>Salute</span>
+                    <span class="bd-val">118,50 €</span>
+                    <span class="bd-track"><i style="width:24%;background:var(--cat-ciano)"></i></span>
+                  </div>
+                  <div class="bd-row">
+                    <span class="bd-name"><span class="dot" style="background:var(--cat-viola)"></span>Tempo libero</span>
+                    <span class="bd-val">94,00 €</span>
+                    <span class="bd-track"><i style="width:19%;background:var(--cat-viola)"></i></span>
+                  </div>
+                  <div class="bd-row">
+                    <span class="bd-name"><span class="dot" style="background:var(--ink-lo)"></span>Altro</span>
+                    <span class="bd-val">87,50 €</span>
+                    <span class="bd-track"><i style="width:18%;background:var(--ink-lo)"></i></span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <nav class="nav">
+              <a href="#"><svg width="21" height="21"><use href="#ic-list"/></svg>Movimenti</a>
+              <a href="#" class="on"><svg width="21" height="21"><use href="#ic-chart"/></svg>Statistiche</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-repeat"/></svg>Ricorrenti</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-gear"/></svg>Impostazioni</a>
+            </nav>
+
+          </div>
+        </div>
+        <div class="caption">
+          <h3>Leggibile, non decorato</h3>
+          <p>
+            Barre sobrie, niente torta: confrontare fette è più difficile che confrontare
+            lunghezze. Ogni categoria porta il proprio nome accanto al colore, così chi non
+            distingue le tinte legge comunque tutto.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════ VARIANTE CHIARA ══════════════ -->
+  <section>
+    <h2>La stessa schermata di giorno</h2>
+    <p class="sub">
+      Il tema scuro è quello principale, ma il chiaro non può essere un ripensamento: chi
+      lascia il telefono in automatico se lo ritrova alle due del pomeriggio. Gli stessi
+      token, invertiti sui ruoli e non sui valori — le tinte delle categorie restano
+      identiche perché sono state scelte per reggere entrambi i fondi.
+    </p>
+
+    <div class="devices" style="grid-template-columns:minmax(300px,360px);justify-items:start">
+      <div class="device-cell">
+        <div class="phone phone--light">
+          <div class="screen">
+
+            <div class="statusbar">
+              <span>14:12</span>
+              <span class="icons">
+                <span class="bars"><i></i><i></i><i></i><i></i></span>
+                <span class="batt"><span></span></span>
+              </span>
+            </div>
+
+            <div class="body">
+              <div class="apptop">
+                <span class="month">
+                  Luglio 2026
+                  <svg width="17" height="17"><use href="#ic-chevron"/></svg>
+                </span>
+                <span class="iconbtn">
+                  <svg width="16" height="16"><use href="#ic-search"/></svg>
+                </span>
+              </div>
+
+              <div class="balance">
+                <div class="lbl">Speso questo mese</div>
+                <div class="amount-xl">1.284,60<span class="cur">€</span></div>
+                <div class="track"><i style="width:71.4%"></i></div>
+                <div class="track-legend">
+                  <span>Restano <b>515,40 €</b></span>
+                  <span>su 1.800,00 €</span>
+                </div>
+              </div>
+
+              <div class="upcoming">
+                <span class="avatar" style="background:color-mix(in oklab, var(--cat-blu) 15%, transparent); color:var(--cat-blu)">
+                  <svg width="18" height="18"><use href="#ic-building"/></svg>
+                </span>
+                <span class="txt">
+                  <span class="t1">Condominio</span>
+                  <span class="t2">In arrivo martedì 28</span>
+                </span>
+                <span class="val">145,00 €</span>
+              </div>
+
+              <div>
+                <div class="daybar"><b>Oggi</b><span>109,80 €</span></div>
+                <div class="rows">
+                  <div class="row">
+                    <span class="avatar" style="background:color-mix(in oklab, var(--cat-verde) 15%, transparent); color:var(--cat-verde)">
+                      <svg width="18" height="18"><use href="#ic-cart"/></svg>
+                    </span>
+                    <span class="txt">
+                      <span class="t1">Esselunga</span>
+                      <span class="t2">Spesa alimentare</span>
+                    </span>
+                    <span class="val">47,80 €</span>
+                  </div>
+                  <div class="row">
+                    <span class="avatar" style="background:color-mix(in oklab, var(--cat-ambra) 16%, transparent); color:var(--cat-ambra)">
+                      <svg width="18" height="18"><use href="#ic-fuel"/></svg>
+                    </span>
+                    <span class="txt">
+                      <span class="t1">Q8 Tangenziale</span>
+                      <span class="t2">Carburante</span>
+                    </span>
+                    <span class="val">62,00 €</span>
+                  </div>
+                  <div class="row">
+                    <span class="avatar" style="background:color-mix(in oklab, var(--cat-verde) 15%, transparent); color:var(--cat-verde)">
+                      <svg width="18" height="18"><use href="#ic-wallet"/></svg>
+                    </span>
+                    <span class="txt">
+                      <span class="t1">Stipendio</span>
+                      <span class="t2">Entrate</span>
+                    </span>
+                    <span class="val val--in">+2.140,00 €</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <nav class="nav">
+              <span class="fab"><svg width="24" height="24"><use href="#ic-plus"/></svg></span>
+              <a href="#" class="on"><svg width="21" height="21"><use href="#ic-list"/></svg>Movimenti</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-chart"/></svg>Statistiche</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-repeat"/></svg>Ricorrenti</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-gear"/></svg>Impostazioni</a>
+            </nav>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ TOKEN ══════════════ -->
+  <section>
+    <h2>I token da portare in Compose</h2>
+    <p class="sub">
+      Questa è la parte che serve davvero al codice: non le schermate, ma i valori da cui
+      discendono. Vanno trascritti in <code>Theme.kt</code> e da lì non si tocca più un
+      colore a mano da nessuna parte.
+    </p>
+
+    <div class="panel">
+      <h3>Superfici e testo</h3>
+      <p class="hint">
+        Neutri virati al blu, mai grigi puri: su un fondo freddo il gradiente identitario
+        resta parente dello sfondo invece di sembrarci appoggiato sopra. Il nero non è mai
+        pieno — a schermo spento in una stanza buia il nero assoluto fa risaltare i bordi
+        del pannello.
+      </p>
+      <div class="swatches">
+        <div class="sw">
+          <div class="chipcolor" style="background:#0D141C"></div>
+          <div class="meta"><div class="nm">Fondo</div><div class="hex">#0D141C</div><div class="role">background</div></div>
+        </div>
+        <div class="sw">
+          <div class="chipcolor" style="background:#141E28"></div>
+          <div class="meta"><div class="nm">Scheda</div><div class="hex">#141E28</div><div class="role">surface</div></div>
+        </div>
+        <div class="sw">
+          <div class="chipcolor" style="background:#1C2836"></div>
+          <div class="meta"><div class="nm">Rialzato</div><div class="hex">#1C2836</div><div class="role">surfaceVariant</div></div>
+        </div>
+        <div class="sw">
+          <div class="chipcolor" style="background:#24313F"></div>
+          <div class="meta"><div class="nm">Filetto</div><div class="hex">#24313F</div><div class="role">outlineVariant</div></div>
+        </div>
+        <div class="sw">
+          <div class="chipcolor" style="background:#E8EEF5"></div>
+          <div class="meta"><div class="nm">Testo primario</div><div class="hex">#E8EEF5</div><div class="role">onSurface</div></div>
+        </div>
+        <div class="sw">
+          <div class="chipcolor" style="background:#7B8998"></div>
+          <div class="meta"><div class="nm">Testo secondario</div><div class="hex">#7B8998</div><div class="role">onSurfaceVariant</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Identità e semantica</h3>
+      <p class="hint">
+        Il gradiente è l'identità e va usato in due posti soltanto: la scheda del saldo e
+        l'azione primaria. Un'app che colora di rosso ogni spesa genera ansia e si
+        disinstalla — per questo gli importi normali restano testo neutro, e il rosso
+        appare solo quando il budget è sforato davvero.
+      </p>
+      <div class="swatches">
+        <div class="sw">
+          <div class="chipcolor" style="background:linear-gradient(100deg,#2F6BFF,#1FD8A4)"></div>
+          <div class="meta"><div class="nm">Gradiente identitario</div><div class="hex">#2F6BFF → #1FD8A4</div><div class="role">saldo e azione primaria</div></div>
+        </div>
+        <div class="sw">
+          <div class="chipcolor" style="background:#2F6BFF"></div>
+          <div class="meta"><div class="nm">Blu</div><div class="hex">#2F6BFF</div><div class="role">primary</div></div>
+        </div>
+        <div class="sw">
+          <div class="chipcolor" style="background:#1FD8A4"></div>
+          <div class="meta"><div class="nm">Verde</div><div class="hex">#1FD8A4</div><div class="role">secondary · stato attivo</div></div>
+        </div>
+        <div class="sw">
+          <div class="chipcolor" style="background:#12A374"></div>
+          <div class="meta"><div class="nm">Entrata</div><div class="hex">#12A374</div><div class="role">solo sugli importi in entrata</div></div>
+        </div>
+        <div class="sw">
+          <div class="chipcolor" style="background:#E85545"></div>
+          <div class="meta"><div class="nm">Budget sforato</div><div class="hex">#E85545</div><div class="role">error — mai decorativo</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Le otto tinte delle categorie</h3>
+      <p class="hint">
+        Assegnate in quest'ordine fisso e mai rimescolate: il colore segue la categoria, non
+        la posizione in classifica, altrimenti filtrare un mese ridipinge tutto. Verificate
+        con il validatore su entrambi i fondi — banda di luminosità, croma minimo,
+        separazione per deuteranopia e tritanopia, contrasto sulla superficie: tutto
+        superato. La coppia rosso/verde non è mai adiacente.
+      </p>
+      <div class="swatches">
+        <div class="sw"><div class="chipcolor" style="background:#12A374"></div><div class="meta"><div class="nm">Verde</div><div class="hex">#12A374</div><div class="role">Spesa quotidiana</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#8B5CF6"></div><div class="meta"><div class="nm">Viola</div><div class="hex">#8B5CF6</div><div class="role">Tempo libero</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#E85545"></div><div class="meta"><div class="nm">Corallo</div><div class="hex">#E85545</div><div class="role">Tasse e tributi</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#0E93AE"></div><div class="meta"><div class="nm">Ciano</div><div class="hex">#0E93AE</div><div class="role">Salute</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#B07F0A"></div><div class="meta"><div class="nm">Ambra</div><div class="hex">#B07F0A</div><div class="role">Trasporti</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#3B7BE8"></div><div class="meta"><div class="nm">Blu</div><div class="hex">#3B7BE8</div><div class="role">Casa</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#DB4F92"></div><div class="meta"><div class="nm">Rosa</div><div class="hex">#DB4F92</div><div class="role">Persona</div></div></div>
+        <div class="sw"><div class="chipcolor" style="background:#6E9E2F"></div><div class="meta"><div class="nm">Oliva</div><div class="hex">#6E9E2F</div><div class="role">Finanza</div></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Scala tipografica</h3>
+      <p class="hint">
+        Un solo carattere, quello di sistema: SF Pro su Apple, Roboto su Android. È la scelta
+        che rende l'app parte del telefono invece di un ospite. Tutto ciò che è cifra usa le
+        cifre tabulari, così le colonne di importi restano allineate. I pesi sono soltanto
+        tre — Regular, Medium e Bold — perché sono gli unici che Roboto ha davvero: chiedergli
+        un 600 significa lasciare che il sistema arrotondi a caso.
+      </p>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ruolo</th><th class="mono">Compose</th><th>Dimensione</th><th>Peso</th><th>Esempio</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Saldo</td><td class="mono">displaySmall</td><td class="num">38 sp</td><td class="num">700 · Bold</td>
+              <td class="specimen" style="font-size:30px;font-weight:700;font-variant-numeric:tabular-nums">1.284,60 €</td>
+            </tr>
+            <tr>
+              <td>Titolo schermata</td><td class="mono">headlineSmall</td><td class="num">21 sp</td><td class="num">700 · Bold</td>
+              <td class="specimen" style="font-size:19px;font-weight:700">Luglio 2026</td>
+            </tr>
+            <tr>
+              <td>Importo di riga</td><td class="mono">titleMedium</td><td class="num">15 sp</td><td class="num">700 · Bold</td>
+              <td class="specimen" style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums">47,80 €</td>
+            </tr>
+            <tr>
+              <td>Nome esercente</td><td class="mono">bodyLarge</td><td class="num">14,5 sp</td><td class="num">500 · Medium</td>
+              <td style="font-size:14.5px;font-weight:500">Esselunga</td>
+            </tr>
+            <tr>
+              <td>Categoria</td><td class="mono">bodySmall</td><td class="num">12 sp</td><td class="num">400 · Regular</td>
+              <td style="font-size:12px;color:var(--page-muted)">Spesa alimentare</td>
+            </tr>
+            <tr>
+              <td>Etichetta navigazione</td><td class="mono">labelSmall</td><td class="num">10 sp</td><td class="num">500 · Medium</td>
+              <td style="font-size:10px;font-weight:500;letter-spacing:.01em">Movimenti</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Spaziature, raggi, aree toccabili</h3>
+      <p class="hint">
+        Griglia da 4&nbsp;dp. I raggi sono generosi ma non uniformi: più grande è la
+        superficie, più grande il raggio, altrimenti le schede sembrano gonfie e i chip
+        sembrano rigidi.
+      </p>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th>Elemento</th><th>Valore</th><th>Nota</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Margine laterale schermo</td><td class="num mono">18 dp</td><td>Uguale su tutte le schermate</td></tr>
+            <tr><td>Distanza fra blocchi</td><td class="num mono">18 dp</td><td>Gestita dal layout, non da margini per elemento</td></tr>
+            <tr><td>Raggio scheda saldo</td><td class="num mono">24 dp</td><td>La superficie più grande</td></tr>
+            <tr><td>Raggio schede e tasti</td><td class="num mono">15–17 dp</td><td></td></tr>
+            <tr><td>Raggio icona categoria</td><td class="num mono">12 dp</td><td>Quadrato stondato, non cerchio</td></tr>
+            <tr><td>Chip e barre</td><td class="num mono">99 dp</td><td>Completamente stondati</td></tr>
+            <tr><td>Area toccabile minima</td><td class="num mono">48 × 48 dp</td><td>Vale anche dove il segno grafico è più piccolo</td></tr>
+            <tr><td>Tasto del tastierino</td><td class="num mono">44 dp di altezza</td><td>Area estesa a 48 con il padding</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ NOTE ══════════════ -->
+  <section>
+    <h2>Tre cose da sapere prima di approvare</h2>
+    <div class="notes" style="margin-top:26px">
+      <div class="note">
+        <h4>Lo stile è Apple, la grammatica è Android</h4>
+        <p>
+          Il respiro, la sobrietà e la tipografia grande vengono da lì. La struttura no:
+          barra di navigazione in basso, pulsante flottante, foglio che sale dal fondo,
+          gesto di ritorno di sistema. Sono tutti componenti che hanno una corrispondenza
+          diretta in Compose, quindi la traduzione è trascrizione e non riscrittura.
+        </p>
+      </div>
+      <div class="note">
+        <h4>Il colore dinamico va deciso adesso</h4>
+        <p>
+          Android sa derivare la palette dallo sfondo scelto dall'utente. È una funzione
+          molto amata, ma manderebbe in soffitta il gradiente blu-verde. La proposta è
+          tenerlo come identità fissa e offrire il colore dinamico come opzione, non come
+          predefinito.
+        </p>
+      </div>
+      <div class="note">
+        <h4>Manca ancora una schermata</h4>
+        <p>
+          Quella delle ricorrenti, che è la funzione su cui si gioca il fatto che l'app
+          venga ancora aperta fra tre mesi. Ha senso disegnarla solo dopo che questa
+          direzione è approvata, perché eredita tutto da qui.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Bozza visiva di LeMieSpese, luglio 2026. Contenuti e importi sono di esempio ma
+    realistici; le tinte delle categorie sono state verificate con un validatore su fondo
+    chiaro e scuro per luminosità, croma, contrasto e separazione in caso di daltonismo.
+    Nessun dato reale è stato usato per costruire questa pagina — del resto, l'app è fatta
+    proprio perché non ne esistano da nessuna parte se non sul telefono di chi la usa.
+  </footer>
+
+</div>
