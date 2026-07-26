@@ -1,0 +1,14 @@
+[versions]
+kotlin = "2.4.10"
+kotlinxSerialization = "1.11.0"
+# Bytecode target del modulo :core. Deve restare compatibile con quello che
+# l'Android Gradle Plugin accetta: 17 è il valore sicuro per AGP 8.x.
+jvmTarget = "17"
+
+[libraries]
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
