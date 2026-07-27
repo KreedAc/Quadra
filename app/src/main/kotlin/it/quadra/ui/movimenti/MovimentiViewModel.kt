@@ -42,6 +42,22 @@ data class StatoMovimenti(
     fun conto(id: String): Account? = conti.firstOrNull { it.id == id }
 
     /**
+     * L'icona da mostrare per una categoria.
+     *
+     * Le sottocategorie non hanno un'icona propria: nella griglia di inserimento sono
+     * chip di solo testo, quindi non serviva. Ma nella lista dei movimenti l'icona serve
+     * eccome, e senza questa risalita una spesa segnata come "Supermercato" comparirebbe
+     * con i tre puntini del ripiego invece che col carrello della sua famiglia.
+     */
+    fun icona(categoriaId: String): String? {
+        val categoria = categoria(categoriaId) ?: return null
+        return categoria.icon ?: categoria.parentId?.let { categoria(it)?.icon }
+    }
+
+    /** Come [icona], ma per il colore. Le sottocategorie lo ereditano già sul record. */
+    fun colore(categoriaId: String): Int? = categoria(categoriaId)?.colorArgb
+
+    /**
      * Cosa scrivere sotto al nome di un movimento.
      *
      * Ripetere due volte la stessa parola — "Spesa" sopra e "Spesa" sotto — occupa una

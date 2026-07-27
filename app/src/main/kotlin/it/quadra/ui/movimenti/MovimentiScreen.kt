@@ -82,6 +82,7 @@ fun MovimentiScreen(
                 RigaMovimento(
                     movimento = movimento,
                     categoria = stato.categoria(movimento.categoryId),
+                    icona = stato.icona(movimento.categoryId),
                     sottotitolo = stato.sottotitolo(movimento),
                     onLongClick = { viewModel.cancella(movimento) },
                 )
@@ -176,6 +177,7 @@ private fun IntestazioneGiorno(giornata: Giornata) {
 private fun RigaMovimento(
     movimento: Transaction,
     categoria: Category?,
+    icona: String?,
     sottotitolo: String,
     onLongClick: () -> Unit,
 ) {
@@ -196,7 +198,7 @@ private fun RigaMovimento(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                iconFor(categoria?.icon),
+                iconFor(icona),
                 contentDescription = null,
                 tint = colore,
                 modifier = Modifier.size(19.dp),
