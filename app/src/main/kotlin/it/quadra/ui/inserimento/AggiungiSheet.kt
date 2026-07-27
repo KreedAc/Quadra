@@ -41,6 +41,7 @@ import it.quadra.core.input.Digitazione
 import it.quadra.core.model.Account
 import it.quadra.core.model.Category
 import it.quadra.core.model.Money
+import it.quadra.ui.Icone
 import it.quadra.ui.common.ImportoGrande
 import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
@@ -64,6 +65,7 @@ fun AggiungiSheet(
     tutteLeCategorie: List<Category>,
     conti: List<Account>,
     onChiudi: () -> Unit,
+    onPersonalizza: () -> Unit,
     onSalva: (importo: Money, categoriaId: String, contoId: String) -> Unit,
 ) {
     val stato = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -76,7 +78,7 @@ fun AggiungiSheet(
     ) {
         val selezionata = scelta
         if (selezionata == null) {
-            PassoGriglia(categorie) { scelta = it }
+            PassoGriglia(categorie, onPersonalizza) { scelta = it }
         } else {
             PassoImporto(
                 categoria = selezionata,
@@ -92,7 +94,11 @@ fun AggiungiSheet(
 }
 
 @Composable
-private fun PassoGriglia(categorie: List<Category>, onScelta: (Category) -> Unit) {
+private fun PassoGriglia(
+    categorie: List<Category>,
+    onPersonalizza: () -> Unit,
+    onScelta: (Category) -> Unit,
+) {
     Column(Modifier.padding(horizontal = 18.dp).padding(bottom = 24.dp)) {
         Text(
             "Dove è andata",
@@ -109,7 +115,38 @@ private fun PassoGriglia(categorie: List<Category>, onScelta: (Category) -> Unit
             gridItems(categorie, key = { it.id }) { categoria ->
                 Casella(categoria) { onScelta(categoria) }
             }
+            // La matita sta qui, in coda alla griglia, e non solo nelle impostazioni:
+            // è guardando le proprie categorie che viene voglia di cambiarle, e chi non
+            // sa che si può fare non va a cercarlo in un altro posto.
+            item(key = "personalizza") { CasellaMatita(onPersonalizza) }
         }
+    }
+}
+
+@Composable
+private fun CasellaMatita(onClick: () -> Unit) {
+    val colore = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(RoundedCornerShape(15.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icone.Matita, contentDescription = null, tint = colore, modifier = Modifier.size(20.dp))
+        }
+        Text(
+            "Modifica",
+            style = MaterialTheme.typography.labelSmall,
+            color = colore,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+        )
     }
 }
 

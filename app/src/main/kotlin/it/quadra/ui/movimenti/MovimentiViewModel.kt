@@ -48,8 +48,18 @@ data class StatoMovimenti(
     /** Le giornate da mostrare: tutte, oppure solo quella scelta nella striscia. */
     val giornateVisibili: List<Giornata>
         get() = giornoScelto?.let { scelto -> giornate.filter { it.data == scelto } } ?: giornate
+    /**
+     * Le famiglie da mostrare nella griglia del +.
+     *
+     * Le entrate non ci sono. Registrare uno stipendio non è dire dove è andato il
+     * denaro, ed è arrivato su una carta precisa: si fa dal conto, dove la prima cosa
+     * che si sceglie è quella giusta. Nella griglia obbligava a scegliere la categoria
+     * prima del conto, cioè al contrario di come lo si pensa.
+     */
     val categoriePrincipali: List<Category>
-        get() = categorie.filter { it.isTopLevel && !it.hidden }.sortedBy { it.sortOrder }
+        get() = categorie
+            .filter { it.isTopLevel && !it.hidden && !it.isIncome }
+            .sortedBy { it.sortOrder }
 
     fun categoria(id: String): Category? = categorie.firstOrNull { it.id == id }
 

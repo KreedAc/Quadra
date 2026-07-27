@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,6 +43,7 @@ import it.quadra.core.ledger.Ledger
 import it.quadra.core.ledger.Totals
 import it.quadra.core.input.Digitazione
 import it.quadra.core.model.Account
+import it.quadra.core.model.Category
 import it.quadra.core.model.AccountKind
 import it.quadra.core.model.Money
 import it.quadra.data.LedgerRepository
@@ -70,6 +70,7 @@ data class StatoConti(
     val tutti: List<Account> = emptyList(),
     val saldi: Map<String, Money> = emptyMap(),
     val totali: Totals = Totals(Money.ZERO, Money.ZERO),
+    val entrate: List<Category> = emptyList(),
 ) {
     val spendibili: List<Account> get() = tutti.filter { it.includedInTotal }
     val vincolati: List<Account> get() = tutti.filterNot { it.includedInTotal }
@@ -81,11 +82,17 @@ class ContiViewModel(private val repository: LedgerRepository) : ViewModel() {
     val stato: StateFlow<StatoConti> = combine(
         repository.observeAccounts(),
         repository.observeAllTransactions(),
-    ) { conti, movimenti ->
+        repository.observeCategories(),
+    ) { conti, movimenti, categorie ->
         StatoConti(
             tutti = conti.filterNot { it.archived }.sortedBy { it.sortOrder },
             saldi = Ledger.balances(conti, movimenti),
             totali = Ledger.totals(conti, movimenti),
+            // Le voci di entrata, sia la famiglia sia le sue sottocategorie: qui si
+            // registra uno stipendio, e "Entrate" da solo non direbbe da dove viene.
+            entrate = categorie
+                .filter { it.isIncome && !it.hidden && it.parentId != null }
+                .sortedBy { it.sortOrder },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatoConti())
 
@@ -118,6 +125,24 @@ class ContiViewModel(private val repository: LedgerRepository) : ViewModel() {
 
     fun allinea(conto: Account, saldoReale: Money) {
         viewModelScope.launch { repository.reconcile(conto, saldoReale) }
+    }
+
+    /**
+     * Registra un'entrata su questo conto.
+     *
+     * Sta qui e non nella griglia delle spese perché è un'operazione sul conto: uno
+     * stipendio non è una cosa in cui il denaro è "andato", ed è arrivato su una carta
+     * precisa. Nella griglia costringeva a scegliere prima la categoria e poi il conto,
+     * cioè al contrario di come lo si pensa.
+     */
+    fun registraEntrata(conto: Account, importo: Money, categoriaId: String) {
+        viewModelScope.launch {
+            repository.add(
+                amount = importo.asIncome(),
+                categoryId = categoriaId,
+                accountId = conto.id,
+            )
+        }
     }
 }
 
@@ -188,6 +213,7 @@ fun ContiScreen(viewModel: ContiViewModel, modifier: Modifier = Modifier) {
             conto = conto,
             saldo = stato.saldo(conto),
             altriConti = stato.tutti.filter { it.id != conto.id },
+            entrate = stato.entrate,
             onChiudi = { scelto = null },
             viewModel = viewModel,
         )
@@ -319,7 +345,7 @@ private fun RigaConto(conto: Account, saldo: Money, ultimo: Boolean, onClick: ()
 }
 
 /** I passi in cui può trovarsi il foglio di un conto. */
-private enum class Passo { AZIONI, TRASFERIMENTO, ALLINEA, MODIFICA }
+private enum class Passo { AZIONI, ENTRATA, TRASFERIMENTO, ALLINEA, MODIFICA }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -327,6 +353,7 @@ private fun FoglioConto(
     conto: Account,
     saldo: Money,
     altriConti: List<Account>,
+    entrate: List<Category>,
     onChiudi: () -> Unit,
     viewModel: ContiViewModel,
 ) {
@@ -346,10 +373,16 @@ private fun FoglioConto(
             when (passo) {
                 Passo.AZIONI -> Azioni(
                     trasferibile = altriConti.isNotEmpty(),
+                    onEntrata = { passo = Passo.ENTRATA },
                     onTrasferisci = { passo = Passo.TRASFERIMENTO },
                     onAllinea = { passo = Passo.ALLINEA },
                     onModifica = { passo = Passo.MODIFICA },
                 )
+
+                Passo.ENTRATA -> PassoEntrata(entrate) { importo, categoriaId ->
+                    viewModel.registraEntrata(conto, importo, categoriaId)
+                    onChiudi()
+                }
 
                 Passo.TRASFERIMENTO -> PassoTrasferimento(conto, altriConti) { destinazione, importo ->
                     viewModel.trasferisci(conto, destinazione, importo)
@@ -415,13 +448,15 @@ private fun Intestazione(conto: Account, saldo: Money) {
 @Composable
 private fun Azioni(
     trasferibile: Boolean,
+    onEntrata: () -> Unit,
     onTrasferisci: () -> Unit,
     onAllinea: () -> Unit,
     onModifica: () -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        Bottone(Icone.Su, "Entrata", extra.income, true, Modifier.weight(1f), onEntrata)
         Bottone(Icone.Scambio, "Trasferisci", extra.brandEnd, trasferibile, Modifier.weight(1f), onTrasferisci)
-        Bottone(Icone.Spunta, "Allinea saldo", extra.brandStart, true, Modifier.weight(1f), onAllinea)
+        Bottone(Icone.Spunta, "Allinea", extra.brandStart, true, Modifier.weight(1f), onAllinea)
         Bottone(Icone.Matita, "Modifica", MaterialTheme.colorScheme.onSurfaceVariant, true, Modifier.weight(1f), onModifica)
     }
     if (!trasferibile) {
@@ -463,6 +498,33 @@ private fun Bottone(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+    }
+}
+
+/** Registrare un'entrata: quanto è arrivato e da dove viene. */
+@Composable
+private fun PassoEntrata(entrate: List<Category>, onConferma: (Money, String) -> Unit) {
+    var digitato by remember { mutableStateOf(Digitazione()) }
+    var categoria by remember { mutableStateOf(entrate.firstOrNull()) }
+    val importo = digitato.importo
+
+    Text(
+        "Da dove arriva",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    ChipRow(
+        voci = entrate,
+        scelta = categoria,
+        etichetta = { it.name },
+        colore = { extra.income },
+        onScelta = { categoria = it },
+    )
+    ImportoGrande(digitato)
+    Tastierino(digitato) { digitato = it }
+    val pronto = !importo.isZero && categoria != null
+    Azione("Registra entrata", extra.income, pronto) {
+        categoria?.let { onConferma(importo, it.id) }
     }
 }
 

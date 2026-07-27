@@ -40,6 +40,8 @@ import it.quadra.ui.impostazioni.ImpostazioniViewModel
 import it.quadra.ui.inserimento.AggiungiSheet
 import it.quadra.ui.movimenti.MovimentiScreen
 import it.quadra.ui.movimenti.MovimentiViewModel
+import it.quadra.ui.ricorrenti.RicorrentiScreen
+import it.quadra.ui.ricorrenti.RicorrentiViewModel
 import it.quadra.ui.statistiche.StatisticheScreen
 import it.quadra.ui.statistiche.StatisticheViewModel
 import it.quadra.ui.theme.extra
@@ -75,6 +77,7 @@ fun Root(repository: LedgerRepository) {
     var destinazione by remember { mutableStateOf(Destinazione.MOVIMENTI) }
     var foglioAperto by remember { mutableStateOf(false) }
     var categorieAperte by remember { mutableStateOf(false) }
+    var ricorrentiAperte by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
 
     val movimentiVM: MovimentiViewModel = viewModel(factory = Fabbrica { MovimentiViewModel(repository) })
@@ -82,6 +85,7 @@ fun Root(repository: LedgerRepository) {
     val statisticheVM: StatisticheViewModel = viewModel(factory = Fabbrica { StatisticheViewModel(repository) })
     val categorieVM: CategorieViewModel = viewModel(factory = Fabbrica { CategorieViewModel(repository) })
     val impostazioniVM: ImpostazioniViewModel = viewModel(factory = Fabbrica { ImpostazioniViewModel(repository) })
+    val ricorrentiVM: RicorrentiViewModel = viewModel(factory = Fabbrica { RicorrentiViewModel(repository) })
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -111,7 +115,7 @@ fun Root(repository: LedgerRepository) {
         floatingActionButton = {
             // Il pulsante compare solo dove ha senso: registrare una spesa dalla
             // schermata delle impostazioni non vuol dire niente.
-            if (destinazione == Destinazione.MOVIMENTI && !categorieAperte) {
+            if (destinazione == Destinazione.MOVIMENTI && !categorieAperte && !ricorrentiAperte) {
                 val forma = RoundedCornerShape(19.dp)
                 FloatingActionButton(
                     onClick = { foglioAperto = true },
@@ -146,6 +150,11 @@ fun Root(repository: LedgerRepository) {
                 onIndietro = { categorieAperte = false },
                 modifier = contenuto,
             )
+            ricorrentiAperte -> RicorrentiScreen(
+                viewModel = ricorrentiVM,
+                onIndietro = { ricorrentiAperte = false },
+                modifier = contenuto,
+            )
             destinazione == Destinazione.MOVIMENTI -> MovimentiScreen(movimentiVM, snackbar, contenuto)
             destinazione == Destinazione.CONTI -> ContiScreen(contiVM, contenuto)
             destinazione == Destinazione.STATISTICHE -> StatisticheScreen(statisticheVM, contenuto)
@@ -153,6 +162,7 @@ fun Root(repository: LedgerRepository) {
                 viewModel = impostazioniVM,
                 snackbar = snackbar,
                 onApriCategorie = { categorieAperte = true },
+                onApriRicorrenti = { ricorrentiAperte = true },
                 modifier = contenuto,
             )
         }
@@ -165,6 +175,10 @@ fun Root(repository: LedgerRepository) {
             tutteLeCategorie = stato.categorie,
             conti = stato.conti,
             onChiudi = { foglioAperto = false },
+            onPersonalizza = {
+                foglioAperto = false
+                categorieAperte = true
+            },
             onSalva = { importo, categoriaId, contoId ->
                 movimentiVM.aggiungi(importo, categoriaId, contoId)
                 foglioAperto = false

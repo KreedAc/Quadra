@@ -246,6 +246,8 @@ private fun BloccoCategoria(
 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             items(figlie, key = { it.id }) { figlia ->
+                // Anche le sottocategorie si toccano per modificarle: la matita in alto
+                // vale per tutto il blocco, non solo per la riga su cui sta.
                 Chip(figlia.name, MaterialTheme.colorScheme.surfaceVariant) { onModifica(figlia) }
             }
             item {

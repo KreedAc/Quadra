@@ -12,6 +12,7 @@ import it.quadra.core.model.Category
 import it.quadra.core.model.DefaultAccounts
 import it.quadra.core.model.DefaultCategories
 import it.quadra.core.model.Money
+import it.quadra.core.model.RecurringRule
 import it.quadra.core.model.Transaction
 import it.quadra.core.model.TransactionSource
 import it.quadra.core.recurrence.RecurrenceEngine
@@ -316,6 +317,26 @@ class LedgerRepository(private val db: AppDatabase) {
                 )
             }
         }
+    }
+
+    // ───────────────────────────────────────────── ricorrenti
+
+    fun observeRecurring(): Flow<List<RecurringRule>> =
+        db.recurringRules().observeAll().map { righe -> righe.map { it.toDomain() } }
+
+    suspend fun salvaRicorrente(regola: RecurringRule) {
+        db.recurringRules().upsert(regola.toEntity())
+    }
+
+    /**
+     * Toglie una regola, lasciando i movimenti che ha già generato.
+     *
+     * Cancellarli sarebbe riscrivere il passato: quelle spese sono avvenute davvero, e
+     * il saldo dei conti le comprende. Smettere di generarne di nuove è tutto ciò che
+     * si sta chiedendo.
+     */
+    suspend fun rimuoviRicorrente(regola: RecurringRule) {
+        db.recurringRules().delete(regola.toEntity())
     }
 
     // ───────────────────────────────────────────── preferenze

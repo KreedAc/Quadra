@@ -52,6 +52,7 @@ fun ImpostazioniScreen(
     viewModel: ImpostazioniViewModel,
     snackbar: SnackbarHostState,
     onApriCategorie: () -> Unit,
+    onApriRicorrenti: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -97,6 +98,16 @@ fun ImpostazioniScreen(
                     titolo = "Categorie",
                     sottotitolo = "Rinomina, ricolora, aggiungi e togli quello che vuoi",
                     onClick = onApriCategorie,
+                )
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+                VoceImpostazione(
+                    icona = Icone.Scambio,
+                    titolo = "Spese ricorrenti",
+                    sottotitolo = "Affitto, bollette, abbonamenti: l'app le mette da sola",
+                    onClick = onApriRicorrenti,
                 )
             }
         }
@@ -152,8 +163,7 @@ fun ImpostazioniScreen(
             SchedaTesto(
                 titolo = "In arrivo",
                 righe = listOf(
-                    "Modifica dei movimenti, spese ricorrenti e importazione dei " +
-                        "movimenti dalla banca.",
+                    "Modifica dei movimenti e importazione dei movimenti dalla banca.",
                 ),
             )
         }
