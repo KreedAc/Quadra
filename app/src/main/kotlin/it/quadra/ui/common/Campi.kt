@@ -117,8 +117,10 @@ fun ImportoGrande(importo: Money, modifier: Modifier = Modifier) {
 fun CampoTesto(
     valore: String,
     segnaposto: String,
-    onCambia: (String) -> Unit,
     modifier: Modifier = Modifier,
+    // Ultimo, così le chiamate possono scriverlo come lambda finale:
+    // CampoTesto(nome, "Nome") { nome = it }
+    onCambia: (String) -> Unit,
 ) {
     BasicTextField(
         value = valore,

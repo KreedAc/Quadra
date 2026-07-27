@@ -319,7 +319,7 @@ private fun FoglioModifica(
                     onSalva(categoria.copy(name = nome.trim(), colorArgb = colore, icon = icona))
                 }
             }
-            Azione("Elimina", MaterialTheme.colorScheme.error, onRimuovi)
+            Azione("Elimina", MaterialTheme.colorScheme.error, onClick = onRimuovi)
             Text(
                 "Se la categoria è già stata usata da qualche spesa non viene cancellata " +
                     "ma nascosta, così i movimenti esistenti restano corretti.",

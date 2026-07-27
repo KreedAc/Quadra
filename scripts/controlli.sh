@@ -48,6 +48,13 @@ for f in $file; do
     grep -q "^package " "$f" || segnala "$f: manca la dichiarazione package"
 done
 
+echo "firme dei composable"
+if command -v python3 >/dev/null 2>&1; then
+    python3 scripts/firme.py | sed 's/^  ✗/  ✗/' | grep "✗" && problemi=$((problemi + 1))
+else
+    echo "  (saltato: serve python3)"
+fi
+
 echo
 if [ "$problemi" -eq 0 ]; then
     echo "tutto a posto: $(echo "$file" | wc -w) file controllati"
