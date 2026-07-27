@@ -20,7 +20,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "LeMieSpese"
+rootProject.name = "Quadra"
 
 include(":core")
 include(":app")

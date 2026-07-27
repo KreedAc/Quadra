@@ -1,4 +1,6 @@
-# LeMieSpese
+# Quadra
+
+*Far quadrare i conti.*
 
 App Android per la gestione delle spese personali, con una regola sola: **i dati non
 escono dal telefono.** Nessuna registrazione, nessun account, nessun server nostro,
@@ -7,8 +9,13 @@ da raccogliere: non esiste un posto dove i dati potrebbero arrivare.
 
 ## Stato
 
-In costruzione. Il modulo `:core` esiste, compila ed è coperto da test.
-Il modulo `:app` (Android) non è ancora stato scritto.
+In costruzione.
+
+Il modulo `:core` compila ed è coperto da 74 test che girano davvero.
+
+Il modulo `:app` esiste ma **non è mai stato compilato**: è stato scritto in un ambiente
+senza accesso a Google Maven. Va sgrezzato al primo sync in Android Studio —
+vedi [COME_COMPILARE.md](COME_COMPILARE.md).
 
 ## Architettura
 
@@ -37,6 +44,17 @@ movimenti è una somma, senza casi particolari e senza segni dimenticati in qual
 e ripristini su dispositivi diversi: servono id che restino validi fuori dal database
 che li ha generati.
 
+**Ogni movimento appartiene a un conto, e il saldo non è mai memorizzato:** è sempre
+apertura più movimenti. Un saldo scritto da qualche parte è la classica fonte di numeri
+che divergono dopo una cancellazione o un ripristino. Da questa scelta discendono
+gratuitamente due cose: cancellare un movimento restituisce il credito senza storni, e
+spostarlo su un altro conto aggiusta entrambi i saldi da solo.
+
+**I trasferimenti fra conti non sono spese.** Le due gambe condividono un identificativo
+e sono escluse dai totali, altrimenti spostare cento euro gonfierebbe il mese del doppio.
+Il prelievo al bancomat non esiste come operazione separata: è un trasferimento verso i
+contanti.
+
 **Ogni movimento porta un campo `source`** (manuale, ricorrente, import CSV, notifica).
 Costa nulla oggi ed evita una migrazione dello schema il giorno in cui si aggiunge
 un'origine nuova.
@@ -56,8 +74,10 @@ schermata; il secondo è il dettaglio, che resta a un tocco perché la scelta pr
 lo ha già filtrato. È la decisione da cui dipende la velocità di inserimento: un elenco
 piatto di quaranta voci che scorre obbliga a *leggere* ogni volta per trovare quella
 giusta, mentre una griglia ferma si impara col pollice in una settimana. La velocità non
-viene dai tocchi risparmiati, viene dal non dover cercare. Per questo il test sul primo
-livello fallisce se le voci superano dodici.
+viene dai tocchi risparmiati, viene dal non dover cercare. Per questo un test fallisce di
+proposito se il primo livello supera quindici voci: la griglia è di quattro colonne per
+quattro righe, meno una casella riservata a "Personalizza", e oltre quel numero comincia
+a scorrere — cioè perde esattamente la proprietà per cui è stata disegnata.
 
 ### Fuori perimetro per la v1
 
@@ -110,7 +130,9 @@ Il modulo `:core` è stato scritto proprio per non avere questo vincolo: dipende
 Maven Central e si compila e testa ovunque ci sia un JDK.
 
 Per lavorare sul modulo `:app` serve una macchina con Android Studio e accesso a Google
-Maven. In quel caso vanno riabilitate le righe `google()` in `settings.gradle.kts`.
+Maven. Dove quell'accesso manca, `org.gradle.configureondemand` in `gradle.properties`
+permette comunque di lanciare `:core:test`, perché Gradle configura solo i moduli
+richiesti dal task.
 
 ### Requisiti
 

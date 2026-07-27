@@ -1,4 +1,4 @@
-# Come compilare LeMieSpese
+# Come compilare Quadra
 
 Il modulo `:core` è stato scritto e testato in un ambiente senza accesso a Google Maven,
 quindi 74 test girano davvero. Il modulo `:app` invece **non è mai stato compilato**: è
@@ -9,13 +9,13 @@ cosa aspettarsi.
 
 ```bash
 git clone <url-del-repo>
-cd LeMieSpese
+cd Quadra
 git checkout claude/android-expense-tracker-privacy-8123ba
 ```
 
 ## 2. Apri in Android Studio
 
-`File → Open`, scegli la cartella `LeMieSpese` (quella con `settings.gradle.kts`, non una
+`File → Open`, scegli la cartella `Quadra` (quella con `settings.gradle.kts`, non una
 sottocartella). Lascia partire il Gradle Sync.
 
 ## 3. Il primo sync quasi certamente si lamenta

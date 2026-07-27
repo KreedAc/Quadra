@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Tema di avvio: serve solo finché Compose non prende il controllo. -->
-    <style name="Theme.LeMieSpese" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.Quadra" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">#0D141C</item>
         <item name="android:statusBarColor">#0D141C</item>
         <item name="android:navigationBarColor">#0D141C</item>

@@ -2,13 +2,13 @@
 <!-- Backup automatico di sistema e trasferimento da dispositivo a dispositivo (API 31+). -->
 <data-extraction-rules>
     <cloud-backup>
-        <include domain="database" path="lemiespese.db" />
-        <exclude domain="database" path="lemiespese.db-wal" />
-        <exclude domain="database" path="lemiespese.db-shm" />
+        <include domain="database" path="quadra.db" />
+        <exclude domain="database" path="quadra.db-wal" />
+        <exclude domain="database" path="quadra.db-shm" />
     </cloud-backup>
     <device-transfer>
-        <include domain="database" path="lemiespese.db" />
-        <exclude domain="database" path="lemiespese.db-wal" />
-        <exclude domain="database" path="lemiespese.db-shm" />
+        <include domain="database" path="quadra.db" />
+        <exclude domain="database" path="quadra.db-wal" />
+        <exclude domain="database" path="quadra.db-shm" />
     </device-transfer>
 </data-extraction-rules>

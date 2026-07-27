@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "it.lemiespese"
+    namespace = "it.quadra"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "it.lemiespese"
+        applicationId = "it.quadra"
         // API 26 copre praticamente tutto il parco installato e porta java.time
         // nativo, quindi niente desugaring da configurare.
         minSdk = 26
