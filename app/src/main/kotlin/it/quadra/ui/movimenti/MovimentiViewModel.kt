@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.quadra.core.ledger.Ledger
 import it.quadra.core.model.Account
+import it.quadra.core.model.Account
 import it.quadra.core.model.Category
 import it.quadra.core.model.Money
 import it.quadra.core.model.Transaction
@@ -37,6 +38,23 @@ data class StatoMovimenti(
         get() = categorie.filter { it.isTopLevel && !it.hidden }.sortedBy { it.sortOrder }
 
     fun categoria(id: String): Category? = categorie.firstOrNull { it.id == id }
+
+    fun conto(id: String): Account? = conti.firstOrNull { it.id == id }
+
+    /**
+     * Cosa scrivere sotto al nome di un movimento.
+     *
+     * Ripetere due volte la stessa parola — "Spesa" sopra e "Spesa" sotto — occupa una
+     * riga per non dire niente. Quando il nome è già quello della categoria, sotto va
+     * l'informazione che manca: la famiglia di appartenenza se è una sottocategoria,
+     * altrimenti il conto da cui è uscito il denaro.
+     */
+    fun sottotitolo(movimento: Transaction): String {
+        val categoria = categoria(movimento.categoryId)
+        if (movimento.description.isNotBlank()) return categoria?.name.orEmpty()
+        val genitore = categoria?.parentId?.let { categoria(it) }
+        return genitore?.name ?: conto(movimento.accountId)?.name.orEmpty()
+    }
 }
 
 /** Movimento appena cancellato, in attesa che scada la finestra per annullare. */

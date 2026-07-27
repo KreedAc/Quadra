@@ -82,6 +82,7 @@ fun MovimentiScreen(
                 RigaMovimento(
                     movimento = movimento,
                     categoria = stato.categoria(movimento.categoryId),
+                    sottotitolo = stato.sottotitolo(movimento),
                     onLongClick = { viewModel.cancella(movimento) },
                 )
             }
@@ -175,6 +176,7 @@ private fun IntestazioneGiorno(giornata: Giornata) {
 private fun RigaMovimento(
     movimento: Transaction,
     categoria: Category?,
+    sottotitolo: String,
     onLongClick: () -> Unit,
 ) {
     val colore = categoria?.let { Color(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
@@ -208,13 +210,15 @@ private fun RigaMovimento(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                categoria?.name.orEmpty(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            if (sottotitolo.isNotBlank()) {
+                Text(
+                    sottotitolo,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         Text(
             movimento.amount.abs().format(),
