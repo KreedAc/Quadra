@@ -143,6 +143,29 @@ class BackupTest {
     }
 
     @Test
+    fun `le preferenze fanno il giro come tutto il resto`() {
+        val con = Backup.componi(
+            conti, DefaultCategories.all, movimenti, ricorrenti,
+            preferenze = mapOf("budget.mensile.centesimi" to "180000"),
+        )
+        val esito = Backup.leggi(Backup.scrivi(con)) as EsitoRipristino.Riuscito
+        assertEquals("180000", esito.documento.preferenze["budget.mensile.centesimi"])
+    }
+
+    @Test
+    fun `un backup scritto prima delle preferenze resta leggibile`() {
+        // Il campo è stato aggiunto senza cambiare il numero di formato: i file già
+        // salvati devono continuare a funzionare, con la mappa vuota.
+        val vecchio = Backup.scrivi(documento())
+            .lines().filterNot { "preferenze" in it }.joinToString("\n")
+            .replace(",\n}", "\n}")
+        val esito = Backup.leggi(vecchio)
+        assertIs<EsitoRipristino.Riuscito>(esito)
+        assertTrue(esito.documento.preferenze.isEmpty())
+        assertEquals(movimenti.size, esito.documento.movimenti.size)
+    }
+
+    @Test
     fun `un backup vuoto è valido`() {
         val vuoto = Backup.componi(emptyList(), emptyList(), emptyList(), emptyList())
         val esito = Backup.leggi(Backup.scrivi(vuoto))

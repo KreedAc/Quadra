@@ -16,6 +16,7 @@ import it.quadra.core.model.Transaction
 import it.quadra.core.model.TransactionSource
 import it.quadra.core.recurrence.RecurrenceEngine
 import it.quadra.data.db.AppDatabase
+import it.quadra.data.db.ImpostazioneEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -239,6 +240,7 @@ class LedgerRepository(private val db: AppDatabase) {
             categorie = db.categories().observeAll().first().map { it.toDomain() },
             movimenti = db.transactions().observeAll().first().map { it.toDomain() },
             ricorrenti = db.recurringRules().observeAll().first().map { it.toDomain() },
+            preferenze = db.impostazioni().tutte().associate { it.chiave to it.valore },
         )
         return Backup.scrivi(documento)
     }
@@ -264,6 +266,15 @@ class LedgerRepository(private val db: AppDatabase) {
         db.categories().upsert(documento.categorie.map { it.toDomain().toEntity() })
         db.transactions().upsert(documento.movimenti.map { it.toDomain().toEntity() })
         db.recurringRules().upsert(documento.ricorrenti.map { it.toDomain().toEntity() })
+
+        // Le preferenze si sostituiscono solo se il backup ne porta: un backup vecchio
+        // non deve cancellare il budget già impostato su questo telefono.
+        if (documento.preferenze.isNotEmpty()) {
+            db.impostazioni().deleteAll()
+            db.impostazioni().scrivi(
+                documento.preferenze.map { (chiave, valore) -> ImpostazioneEntity(chiave, valore) }
+            )
+        }
     }
 
     // ───────────────────────────────────────────── primo avvio e ricorrenti
@@ -305,5 +316,29 @@ class LedgerRepository(private val db: AppDatabase) {
                 )
             }
         }
+    }
+
+    // ───────────────────────────────────────────── preferenze
+
+    /**
+     * Il budget mensile, o zero se non è stato impostato.
+     *
+     * Uno solo, valido per ogni mese, e non uno per mese: chi vuole spendere meno a
+     * dicembre lo sa già, e chiedere di reinserirlo dodici volte l'anno lo farebbe
+     * abbandonare dopo febbraio.
+     */
+    fun observeBudget(): Flow<Money> =
+        db.impostazioni().observe(BUDGET).map { Money(it?.toLongOrNull() ?: 0L) }
+
+    suspend fun salvaBudget(budget: Money) {
+        if (budget.cents <= 0) {
+            db.impostazioni().cancella(BUDGET)
+        } else {
+            db.impostazioni().scrivi(ImpostazioneEntity(BUDGET, budget.cents.toString()))
+        }
+    }
+
+    private companion object {
+        const val BUDGET = "budget.mensile.centesimi"
     }
 }

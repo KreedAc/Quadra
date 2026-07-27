@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -40,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import it.quadra.core.ledger.Ledger
 import it.quadra.core.ledger.Totals
+import it.quadra.core.input.Digitazione
 import it.quadra.core.model.Account
 import it.quadra.core.model.AccountKind
 import it.quadra.core.model.Money
@@ -132,10 +135,7 @@ fun ContiScreen(viewModel: ContiViewModel, modifier: Modifier = Modifier) {
     var scelto by remember { mutableStateOf<Account?>(null) }
     var nuovoConto by remember { mutableStateOf(false) }
 
-    LazyColumn(
-        modifier = modifier.padding(horizontal = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    LazyColumn(modifier = modifier.padding(horizontal = 18.dp)) {
         item {
             Row(
                 Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -164,15 +164,19 @@ fun ContiScreen(viewModel: ContiViewModel, modifier: Modifier = Modifier) {
 
         if (stato.spendibili.isNotEmpty()) {
             item { Sezione("Spendibili", stato.totali.available) }
-            items(stato.spendibili, key = { it.id }) { conto ->
-                RigaConto(conto, stato.saldo(conto)) { scelto = conto }
+            itemsIndexed(stato.spendibili, key = { _, c -> c.id }) { indice, conto ->
+                RigaConto(conto, stato.saldo(conto), indice == stato.spendibili.lastIndex) {
+                    scelto = conto
+                }
             }
         }
 
         if (stato.vincolati.isNotEmpty()) {
             item { Sezione("Vincolati", stato.totali.constrained) }
-            items(stato.vincolati, key = { it.id }) { conto ->
-                RigaConto(conto, stato.saldo(conto)) { scelto = conto }
+            itemsIndexed(stato.vincolati, key = { _, c -> c.id }) { indice, conto ->
+                RigaConto(conto, stato.saldo(conto), indice == stato.vincolati.lastIndex) {
+                    scelto = conto
+                }
             }
         }
 
@@ -205,6 +209,7 @@ private fun SchedaDisponibile(stato: StatoConti) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(top = 16.dp)
             .clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.surface)
             .background(
@@ -252,7 +257,10 @@ private fun SchedaDisponibile(stato: StatoConti) {
 
 @Composable
 private fun Sezione(titolo: String, totale: Money) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
             titolo.uppercase(),
             style = MaterialTheme.typography.labelSmall,
@@ -268,10 +276,11 @@ private fun Sezione(titolo: String, totale: Money) {
 }
 
 @Composable
-private fun RigaConto(conto: Account, saldo: Money, onClick: () -> Unit) {
+private fun RigaConto(conto: Account, saldo: Money, ultimo: Boolean, onClick: () -> Unit) {
     val colore = Color(conto.colorArgb)
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -298,6 +307,14 @@ private fun RigaConto(conto: Account, saldo: Money, onClick: () -> Unit) {
             color = if (saldo.isZero) MaterialTheme.colorScheme.onSurfaceVariant
             else MaterialTheme.colorScheme.onSurface,
         )
+    }
+        if (!ultimo) {
+            HorizontalDivider(
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.padding(start = 50.dp),
+            )
+        }
     }
 }
 
@@ -456,8 +473,8 @@ private fun PassoTrasferimento(
     onConferma: (Account, Money) -> Unit,
 ) {
     var destinazione by remember { mutableStateOf(altri.firstOrNull()) }
-    var cifre by remember { mutableStateOf("") }
-    val importo = Money(cifre.toLongOrNull() ?: 0L)
+    var digitato by remember { mutableStateOf(Digitazione()) }
+    val importo = digitato.importo
 
     Text("Verso quale conto", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     ChipRow(
@@ -467,11 +484,8 @@ private fun PassoTrasferimento(
         colore = { Color(it.colorArgb) },
         onScelta = { destinazione = it },
     )
-    ImportoGrande(importo)
-    Tastierino(
-        onCifra = { c -> if (cifre.length < 9) cifre += c },
-        onCancella = { cifre = cifre.dropLast(1) },
-    )
+    ImportoGrande(digitato)
+    Tastierino(digitato) { digitato = it }
     val pronto = !importo.isZero && destinazione != null
     Azione("Trasferisci", extra.brandEnd, pronto) {
         destinazione?.let { onConferma(it, importo) }
@@ -493,10 +507,12 @@ private fun PassoTrasferimento(
  */
 @Composable
 private fun PassoAllinea(saldoAttuale: Money, onConferma: (Money) -> Unit) {
-    var cifre by remember { mutableStateOf("") }
-    val reale = Money(cifre.toLongOrNull() ?: 0L)
+    var digitato by remember { mutableStateOf(Digitazione()) }
+    val reale = digitato.importo
     val differenza = reale - saldoAttuale
-    val scritto = cifre.isNotEmpty()
+    // Zero è un saldo legittimo: quello che distingue "non ho ancora scritto niente" da
+    // "ho scritto zero" è che si sia toccato un tasto, non che il numero sia diverso da 0.
+    val scritto = !digitato.vuota
 
     Row(Modifier.fillMaxWidth()) {
         Text(
@@ -518,7 +534,7 @@ private fun PassoAllinea(saldoAttuale: Money, onConferma: (Money) -> Unit) {
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
     )
-    ImportoGrande(reale)
+    ImportoGrande(digitato)
 
     if (scritto && !differenza.isZero) {
         val colore = if (differenza.isExpense) MaterialTheme.colorScheme.error else extra.income
@@ -550,10 +566,7 @@ private fun PassoAllinea(saldoAttuale: Money, onConferma: (Money) -> Unit) {
         }
     }
 
-    Tastierino(
-        onCifra = { c -> if (cifre.length < 9) cifre += c },
-        onCancella = { cifre = cifre.dropLast(1) },
-    )
+    Tastierino(digitato) { digitato = it }
     Azione("Allinea", extra.brandEnd, scritto && !differenza.isZero) { onConferma(reale) }
 }
 
@@ -602,8 +615,8 @@ private fun FoglioNuovoConto(
     var colore by remember { mutableStateOf(TAVOLOZZA.first()) }
     var icona by remember { mutableStateOf("wallet") }
     var vincolato by remember { mutableStateOf(false) }
-    var cifre by remember { mutableStateOf("") }
-    val apertura = Money(cifre.toLongOrNull() ?: 0L)
+    var digitato by remember { mutableStateOf(Digitazione()) }
+    val apertura = digitato.importo
 
     ModalBottomSheet(
         onDismissRequest = onChiudi,
@@ -625,11 +638,8 @@ private fun FoglioNuovoConto(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            ImportoGrande(apertura)
-            Tastierino(
-                onCifra = { c -> if (cifre.length < 9) cifre += c },
-                onCancella = { cifre = cifre.dropLast(1) },
-            )
+            ImportoGrande(digitato)
+            Tastierino(digitato) { digitato = it }
             Azione("Crea", extra.brandEnd, nome.isNotBlank()) {
                 onConferma(nome.trim(), colore, icona, vincolato, apertura)
             }

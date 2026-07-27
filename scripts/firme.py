@@ -49,6 +49,28 @@ def senza_commenti(testo):
     return re.sub(r"//[^\n]*", "", testo)
 
 
+def senza_stringhe(testo):
+    """Svuota i letterali di testo, tenendo le virgolette.
+
+    Serve al conteggio delle parentesi: una graffa dentro una stringa non apre niente,
+    ma sbilancia il conto e produce un allarme su codice perfettamente valido.
+    """
+    testo = re.sub(r'""".*?"""', '""""""', testo, flags=re.S)
+    testo = re.sub(r'"(\\.|[^"\\\n])*"', '""', testo)
+    return re.sub(r"'(\\.|[^'\\\n])'", "' '", testo)
+
+
+def sbilanciamenti(testo):
+    """Le parentesi che non tornano, ignorando commenti e stringhe."""
+    pulito = senza_stringhe(senza_commenti(testo))
+    fuori = []
+    for apre, chiude, nome in (("{", "}", "graffe"), ("(", ")", "tonde")):
+        a, c = pulito.count(apre), pulito.count(chiude)
+        if a != c:
+            fuori.append(f"{a} {nome} aperte, {c} chiuse")
+    return fuori
+
+
 def corpo(testo, apertura):
     """Il contenuto fra la parentesi che apre in `apertura` e la sua chiusura."""
     profondita = 0
@@ -137,6 +159,11 @@ def main():
     sorgenti = sorted((RADICE / "app/src/main/kotlin").rglob("*.kt"))
     note = firme(sorgenti)
     problemi = controlla(sorgenti, note)
+
+    tutti = sorgenti + sorted((RADICE / "core/src").rglob("*.kt"))
+    for f in tutti:
+        for guaio in sbilanciamenti(f.read_text(encoding="utf-8")):
+            problemi.append(f"{f.name}: {guaio}")
     for p in problemi:
         print(f"  ✗ {p}")
     print(f"\n{len(note)} firme, {len(problemi)} problemi")

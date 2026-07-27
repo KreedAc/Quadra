@@ -135,3 +135,28 @@ interface RecurringRuleDao {
     @Upsert
     suspend fun upsert(rules: List<RecurringRuleEntity>)
 }
+
+@Dao
+interface ImpostazioniDao {
+
+    @Query("SELECT valore FROM impostazioni WHERE chiave = :chiave")
+    fun observe(chiave: String): Flow<String?>
+
+    @Query("SELECT valore FROM impostazioni WHERE chiave = :chiave")
+    suspend fun leggi(chiave: String): String?
+
+    @Upsert
+    suspend fun scrivi(impostazione: ImpostazioneEntity)
+
+    @Query("DELETE FROM impostazioni WHERE chiave = :chiave")
+    suspend fun cancella(chiave: String)
+
+    @Query("SELECT * FROM impostazioni")
+    suspend fun tutte(): List<ImpostazioneEntity>
+
+    @Upsert
+    suspend fun scrivi(impostazioni: List<ImpostazioneEntity>)
+
+    @Query("DELETE FROM impostazioni")
+    suspend fun deleteAll()
+}

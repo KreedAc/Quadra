@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -20,6 +21,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -109,12 +112,27 @@ fun Root(repository: LedgerRepository) {
             // Il pulsante compare solo dove ha senso: registrare una spesa dalla
             // schermata delle impostazioni non vuol dire niente.
             if (destinazione == Destinazione.MOVIMENTI && !categorieAperte) {
+                val forma = RoundedCornerShape(19.dp)
                 FloatingActionButton(
                     onClick = { foglioAperto = true },
                     containerColor = Color.Transparent,
                     contentColor = Color(0xFF04121A),
-                    shape = RoundedCornerShape(19.dp),
-                    modifier = Modifier.background(extra.brand, RoundedCornerShape(19.dp)),
+                    shape = forma,
+                    // L'ombra di serie è nera e su fondo scuro non si vede. Questa è
+                    // colorata come il pulsante: è quella che lo stacca dal fondo e gli
+                    // dà l'aria di essere acceso invece che incollato.
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+                    modifier = Modifier
+                        .shadow(
+                            elevation = 20.dp,
+                            shape = forma,
+                            ambientColor = extra.brandStart,
+                            spotColor = extra.brandStart,
+                        )
+                        .background(
+                            Brush.linearGradient(listOf(extra.brandStart, extra.brandEnd)),
+                            forma,
+                        ),
                 ) {
                     Icon(Icone.Piu, contentDescription = "Aggiungi una spesa")
                 }

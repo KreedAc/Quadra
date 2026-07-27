@@ -37,12 +37,14 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import it.quadra.core.input.Digitazione
 import it.quadra.core.model.Account
 import it.quadra.core.model.Category
 import it.quadra.core.model.Money
+import it.quadra.ui.common.ImportoGrande
+import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
-import it.quadra.ui.theme.tabular
 
 /**
  * L'inserimento in due tocchi.
@@ -148,11 +150,11 @@ private fun PassoImporto(
     onSalva: (Money, String, String) -> Unit,
 ) {
     val colore = Color(categoria.colorArgb)
-    var cifre by remember { mutableStateOf("") }
+    var digitato by remember { mutableStateOf(Digitazione()) }
     var sottoscelta by remember { mutableStateOf<Category?>(null) }
     var conto by remember { mutableStateOf(conti.firstOrNull()) }
 
-    val importo = Money(cifre.toLongOrNull() ?: 0L)
+    val importo = digitato.importo
 
     Column(
         modifier = Modifier.padding(horizontal = 18.dp).padding(bottom = 24.dp),
@@ -211,13 +213,7 @@ private fun PassoImporto(
             }
         }
 
-        Text(
-            importo.format(),
-            style = MaterialTheme.typography.displaySmall.tabular,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        ImportoGrande(digitato)
 
         if (conti.size > 1) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -241,10 +237,7 @@ private fun PassoImporto(
             }
         }
 
-        Tastierino(
-            onCifra = { c -> if (cifre.length < 9) cifre += c },
-            onCancella = { cifre = cifre.dropLast(1) },
-        )
+        Tastierino(digitato) { digitato = it }
 
         val contoScelto = conto
         val abilitato = !importo.isZero && contoScelto != null
@@ -264,54 +257,6 @@ private fun PassoImporto(
                 style = MaterialTheme.typography.titleMedium,
                 color = if (abilitato) Color(0xFF04121A) else MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-    }
-}
-
-/**
- * Tastierino numerico disegnato a mano.
- *
- * Le cifre si accumulano in centesimi: si digita "1250" e si ottiene 12,50 €. Non c'è
- * un tasto virgola perché non serve — la virgola si sposta da sola, come sui bancomat.
- */
-@Composable
-private fun Tastierino(onCifra: (Char) -> Unit, onCancella: () -> Unit) {
-    val righe = listOf("123", "456", "789", " 0<")
-    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        righe.forEach { riga ->
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
-                riga.forEach { tasto ->
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(46.dp)
-                            .clip(RoundedCornerShape(15.dp))
-                            .background(
-                                if (tasto == ' ') Color.Transparent
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .clickable(enabled = tasto != ' ') {
-                                if (tasto == '<') onCancella() else onCifra(tasto)
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        when (tasto) {
-                            ' ' -> Unit
-                            '<' -> Icon(
-                                it.quadra.ui.Icone.Cancella,
-                                contentDescription = "Cancella una cifra",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(21.dp),
-                            )
-                            else -> Text(
-                                tasto.toString(),
-                                style = MaterialTheme.typography.headlineSmall.tabular,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }

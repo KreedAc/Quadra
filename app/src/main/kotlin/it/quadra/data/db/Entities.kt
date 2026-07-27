@@ -90,3 +90,17 @@ data class RecurringRuleEntity(
     val skippedDates: String,
     val autoInsert: Boolean,
 )
+
+/**
+ * Le preferenze, come coppie chiave-valore invece che come colonne.
+ *
+ * Una tabella con una riga sola e una colonna per impostazione costringerebbe a una
+ * migrazione dello schema ogni volta che se ne aggiunge una. Qui aggiungerne una è
+ * scrivere una chiave nuova, e leggerne una che non c'è ancora restituisce il valore
+ * predefinito senza che niente si rompa.
+ */
+@Entity(tableName = "impostazioni")
+data class ImpostazioneEntity(
+    @PrimaryKey val chiave: String,
+    val valore: String,
+)

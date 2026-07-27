@@ -17,13 +17,8 @@ for f in $file; do
     [ -n "$d" ] && segnala "$f: $(echo "$d" | tr '\n' ' ')"
 done
 
-echo "parentesi bilanciate"
-for f in $file; do
-    a=$(tr -cd '{' < "$f" | wc -c); c=$(tr -cd '}' < "$f" | wc -c)
-    [ "$a" != "$c" ] && segnala "$f: $a graffe aperte, $c chiuse"
-    a=$(tr -cd '(' < "$f" | wc -c); c=$(tr -cd ')' < "$f" | wc -c)
-    [ "$a" != "$c" ] && segnala "$f: $a tonde aperte, $c chiuse"
-done
+# Le parentesi si contano in scripts/firme.py, che sa togliere commenti e stringhe:
+# contarle qui col solo tr faceva scattare l'allarme su una graffa dentro un letterale.
 
 # Una modifica automatica sbagliata — un ciclo che itera sui caratteri invece che
 # sulle righe, un append dentro un loop — duplica un blocco migliaia di volte. Il

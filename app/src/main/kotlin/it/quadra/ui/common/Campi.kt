@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import it.quadra.core.input.Digitazione
 import it.quadra.core.model.Money
 import it.quadra.ui.ICONE_SCEGLIBILI
 import it.quadra.ui.Icone
@@ -50,48 +51,54 @@ val TAVOLOZZA: List<Int> = listOf(
 /**
  * Tastierino numerico disegnato a mano.
  *
- * Le cifre si accumulano in centesimi: si digita "1250" e si legge 12,50 €. Non c'è un
- * tasto virgola perché la virgola si sposta da sola, come sui bancomat — la gran parte
- * delle spese vere ha i centesimi, e scriverli è più veloce che raggiungere un tasto
- * separato.
+ * I tasti scrivono il numero come lo si scriverebbe su un foglio: 2, 0 fa venti, e i
+ * centesimi arrivano solo dopo la virgola. Le regole stanno in [Digitazione], nel modulo
+ * :core, dove sono coperte dai test: qui restano soltanto i tasti.
  */
 @Composable
 fun Tastierino(
-    onCifra: (Char) -> Unit,
-    onCancella: () -> Unit,
+    stato: Digitazione,
     modifier: Modifier = Modifier,
+    onCambia: (Digitazione) -> Unit,
 ) {
-    val righe = listOf("123", "456", "789", " 0<")
+    val righe = listOf("123", "456", "789", ",0<")
     Column(modifier, verticalArrangement = Arrangement.spacedBy(7.dp)) {
         righe.forEach { riga ->
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
                 riga.forEach { tasto ->
+                    // La virgola già premuta non ha più niente da fare: spegnerla evita
+                    // di far premere un tasto che non risponde.
+                    val attivo = tasto != ',' || !stato.haVirgola
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(46.dp)
                             .clip(RoundedCornerShape(15.dp))
-                            .background(
-                                if (tasto == ' ') Color.Transparent
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .clickable(enabled = tasto != ' ') {
-                                if (tasto == '<') onCancella() else onCifra(tasto)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable(enabled = attivo) {
+                                onCambia(
+                                    when (tasto) {
+                                        '<' -> stato.indietro()
+                                        ',' -> stato.virgola()
+                                        else -> stato.cifra(tasto)
+                                    }
+                                )
                             },
                         contentAlignment = Alignment.Center,
                     ) {
-                        when (tasto) {
-                            ' ' -> Unit
-                            '<' -> Icon(
+                        if (tasto == '<') {
+                            Icon(
                                 Icone.Cancella,
-                                contentDescription = "Cancella una cifra",
+                                contentDescription = "Cancella",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(21.dp),
                             )
-                            else -> Text(
+                        } else {
+                            Text(
                                 tasto.toString(),
                                 style = MaterialTheme.typography.headlineSmall.tabular,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = if (attivo) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                             )
                         }
                     }
@@ -101,11 +108,26 @@ fun Tastierino(
     }
 }
 
-/** L'importo in composizione, grande e centrato. */
+/**
+ * L'importo in composizione, grande e centrato.
+ *
+ * Mostra i tasti premuti e non l'importo formattato: appena si preme la virgola si deve
+ * leggere "20,", perché "20,00" farebbe sembrare i centesimi già scritti.
+ */
+@Composable
+fun ImportoGrande(stato: Digitazione, modifier: Modifier = Modifier) {
+    ImportoGrande("${stato.testo()} €", modifier)
+}
+
 @Composable
 fun ImportoGrande(importo: Money, modifier: Modifier = Modifier) {
+    ImportoGrande(importo.format(), modifier)
+}
+
+@Composable
+private fun ImportoGrande(testo: String, modifier: Modifier) {
     Text(
-        importo.format(),
+        testo,
         style = MaterialTheme.typography.displaySmall.tabular,
         color = MaterialTheme.colorScheme.onSurface,
         textAlign = TextAlign.Center,

@@ -43,6 +43,14 @@ data class BackupDocument(
     @SerialName("categorie") val categorie: List<CategoriaJson> = emptyList(),
     @SerialName("movimenti") val movimenti: List<MovimentoJson> = emptyList(),
     @SerialName("ricorrenti") val ricorrenti: List<RicorrenteJson> = emptyList(),
+    /**
+     * Le preferenze, per ora solo il budget.
+     *
+     * Aggiunto dopo il formato 1 senza cambiarne il numero, ed è il motivo per cui i
+     * campi hanno un default: un backup vecchio letto oggi ottiene la mappa vuota, e un
+     * backup di oggi letto da un'app vecchia ignora il campo e ripristina tutto il resto.
+     */
+    @SerialName("preferenze") val preferenze: Map<String, String> = emptyMap(),
 ) {
     companion object {
         const val FORMATO_CORRENTE = 1
@@ -137,6 +145,7 @@ object Backup {
         categorie: List<Category>,
         movimenti: List<Transaction>,
         ricorrenti: List<RecurringRule>,
+        preferenze: Map<String, String> = emptyMap(),
         adesso: Instant = Instant.now(),
     ): BackupDocument = BackupDocument(
         creatoIl = adesso.toString(),
@@ -144,6 +153,7 @@ object Backup {
         categorie = categorie.map { it.toJson() },
         movimenti = movimenti.map { it.toJson() },
         ricorrenti = ricorrenti.map { it.toJson() },
+        preferenze = preferenze,
     )
 
     fun scrivi(documento: BackupDocument): String = json.encodeToString(documento)

@@ -2,6 +2,7 @@ package it.quadra.ui.movimenti
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import it.quadra.core.budget.Andamento
 import it.quadra.core.ledger.Ledger
 import it.quadra.core.model.Account
 import it.quadra.core.model.Category
@@ -25,6 +26,13 @@ data class Giornata(
     val totale: Money,
 )
 
+/** Un giorno nella striscia in alto: c'è sempre, anche quando non è successo niente. */
+data class GiornoStriscia(
+    val data: LocalDate,
+    val speso: Money,
+    val oggi: Boolean,
+)
+
 data class StatoMovimenti(
     val mese: YearMonth = YearMonth.now(),
     val giornate: List<Giornata> = emptyList(),
@@ -32,7 +40,14 @@ data class StatoMovimenti(
     val categorie: List<Category> = emptyList(),
     val conti: List<Account> = emptyList(),
     val caricato: Boolean = false,
+    val striscia: List<GiornoStriscia> = emptyList(),
+    val giornoScelto: LocalDate? = null,
+    /** null quando il budget non è stato impostato: la barra semplicemente non c'è. */
+    val andamento: Andamento? = null,
 ) {
+    /** Le giornate da mostrare: tutte, oppure solo quella scelta nella striscia. */
+    val giornateVisibili: List<Giornata>
+        get() = giornoScelto?.let { scelto -> giornate.filter { it.data == scelto } } ?: giornate
     val categoriePrincipali: List<Category>
         get() = categorie.filter { it.isTopLevel && !it.hidden }.sortedBy { it.sortOrder }
 
@@ -85,6 +100,7 @@ data class CancellazioneInCorso(val movimenti: List<Transaction>)
 class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel() {
 
     private val mese = MutableStateFlow(YearMonth.now())
+    private val giorno = MutableStateFlow<LocalDate?>(null)
 
     private val _cancellazione = MutableStateFlow<CancellazioneInCorso?>(null)
     val cancellazione: StateFlow<CancellazioneInCorso?> = _cancellazione
@@ -94,20 +110,66 @@ class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel()
         mese.flatMapLatest { repository.observeMonth(it) },
         repository.observeCategories(),
         repository.observeAccounts(),
-    ) { meseCorrente, movimenti, categorie, conti ->
+        combine(giorno, repository.observeBudget()) { g, b -> g to b },
+    ) { meseCorrente, movimenti, categorie, conti, (giornoScelto, budget) ->
+        val giornate = raggruppaPerGiorno(movimenti)
+        val speso = Ledger.totalSpent(movimenti)
         StatoMovimenti(
             mese = meseCorrente,
-            giornate = raggruppaPerGiorno(movimenti),
+            giornate = giornate,
             // I trasferimenti non sono spese: Ledger li esclude, qui non si decide nulla.
-            speso = Ledger.totalSpent(movimenti),
+            speso = speso,
             categorie = categorie,
             conti = conti,
             caricato = true,
+            striscia = striscia(meseCorrente, giornate),
+            giornoScelto = giornoScelto,
+            andamento = Andamento.calcola(speso, budget, meseCorrente),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatoMovimenti())
 
-    fun mesePrecedente() { mese.value = mese.value.minusMonths(1) }
-    fun meseSuccessivo() { mese.value = mese.value.plusMonths(1) }
+    fun mesePrecedente() { cambiaMese(mese.value.minusMonths(1)) }
+    fun meseSuccessivo() { cambiaMese(mese.value.plusMonths(1)) }
+
+    /** Zero o meno toglie il budget: la barra sparisce invece di restare a zero. */
+    fun salvaBudget(budget: Money) {
+        viewModelScope.launch { repository.salvaBudget(budget) }
+    }
+
+    /**
+     * Sceglie un giorno, o torna a vedere tutto il mese passando null.
+     * Toccare il giorno già scelto lo deseleziona: il modo per uscire è lo stesso
+     * gesto con cui si è entrati, senza dover cercare una X.
+     */
+    fun scegliGiorno(data: LocalDate?) {
+        giorno.value = if (giorno.value == data) null else data
+    }
+
+    private fun cambiaMese(nuovo: YearMonth) {
+        mese.value = nuovo
+        // Un giorno di luglio non ha senso mentre si guarda agosto.
+        giorno.value = null
+    }
+
+    /**
+     * Tutti i giorni del mese, anche quelli vuoti.
+     *
+     * Mostrarli tutti e non solo quelli con movimenti è il punto: un giorno a zero è
+     * un'informazione, e una striscia che cambia lunghezza a ogni spesa non si impara
+     * mai a memoria.
+     */
+    private fun striscia(mese: YearMonth, giornate: List<Giornata>): List<GiornoStriscia> {
+        val perData = giornate.associateBy { it.data }
+        val oggi = LocalDate.now()
+        return (1..mese.lengthOfMonth()).map { numero ->
+            val data = mese.atDay(numero)
+            GiornoStriscia(
+                data = data,
+                speso = perData[data]?.totale ?: Money.ZERO,
+                oggi = data == oggi,
+            )
+        }
+    }
 
     fun aggiungi(importo: Money, categoriaId: String, contoId: String, descrizione: String = "") {
         viewModelScope.launch {
