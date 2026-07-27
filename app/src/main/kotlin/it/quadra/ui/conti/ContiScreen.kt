@@ -1,6 +1,7 @@
 package it.quadra.ui.conti
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,16 +14,25 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -31,8 +41,18 @@ import androidx.lifecycle.viewModelScope
 import it.quadra.core.ledger.Ledger
 import it.quadra.core.ledger.Totals
 import it.quadra.core.model.Account
+import it.quadra.core.model.AccountKind
 import it.quadra.core.model.Money
 import it.quadra.data.LedgerRepository
+import it.quadra.ui.Icone
+import it.quadra.ui.common.Azione
+import it.quadra.ui.common.CampoTesto
+import it.quadra.ui.common.ChipRow
+import it.quadra.ui.common.ImportoGrande
+import it.quadra.ui.common.SceltaColore
+import it.quadra.ui.common.SceltaIcona
+import it.quadra.ui.common.TAVOLOZZA
+import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
@@ -40,29 +60,62 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.util.UUID
 
 data class StatoConti(
-    val spendibili: List<Account> = emptyList(),
-    val vincolati: List<Account> = emptyList(),
+    val tutti: List<Account> = emptyList(),
     val saldi: Map<String, Money> = emptyMap(),
     val totali: Totals = Totals(Money.ZERO, Money.ZERO),
 ) {
+    val spendibili: List<Account> get() = tutti.filter { it.includedInTotal }
+    val vincolati: List<Account> get() = tutti.filterNot { it.includedInTotal }
     fun saldo(conto: Account): Money = saldi[conto.id] ?: Money.ZERO
 }
 
-class ContiViewModel(repository: LedgerRepository) : ViewModel() {
+class ContiViewModel(private val repository: LedgerRepository) : ViewModel() {
+
     val stato: StateFlow<StatoConti> = combine(
         repository.observeAccounts(),
         repository.observeAllTransactions(),
     ) { conti, movimenti ->
-        val attivi = conti.filterNot { it.archived }
         StatoConti(
-            spendibili = attivi.filter { it.includedInTotal },
-            vincolati = attivi.filterNot { it.includedInTotal },
+            tutti = conti.filterNot { it.archived }.sortedBy { it.sortOrder },
             saldi = Ledger.balances(conti, movimenti),
             totali = Ledger.totals(conti, movimenti),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatoConti())
+
+    fun salva(conto: Account) {
+        viewModelScope.launch { repository.salvaConto(conto) }
+    }
+
+    fun rimuovi(conto: Account) {
+        viewModelScope.launch { repository.rimuoviConto(conto) }
+    }
+
+    fun nuovo(nome: String, colore: Int, icona: String, vincolato: Boolean, apertura: Money) {
+        salva(
+            Account(
+                id = UUID.randomUUID().toString(),
+                name = nome,
+                kind = AccountKind.OTHER,
+                colorArgb = colore,
+                openingBalance = apertura,
+                includedInTotal = !vincolato,
+                icon = icona,
+                sortOrder = stato.value.tutti.size,
+            )
+        )
+    }
+
+    fun trasferisci(da: Account, a: Account, importo: Money) {
+        viewModelScope.launch { repository.transfer(da, a, importo) }
+    }
+
+    fun allinea(conto: Account, saldoReale: Money) {
+        viewModelScope.launch { repository.reconcile(conto, saldoReale) }
+    }
 }
 
 /**
@@ -76,17 +129,35 @@ class ContiViewModel(repository: LedgerRepository) : ViewModel() {
 @Composable
 fun ContiScreen(viewModel: ContiViewModel, modifier: Modifier = Modifier) {
     val stato by viewModel.stato.collectAsStateWithLifecycle()
+    var scelto by remember { mutableStateOf<Account?>(null) }
+    var nuovoConto by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = modifier.padding(horizontal = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Text(
-                "Conti",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(top = 8.dp),
-            )
+            Row(
+                Modifier.fillMaxWidth().padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Conti", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { nuovoConto = true },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icone.Piu,
+                        contentDescription = "Aggiungi un conto",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(17.dp),
+                    )
+                }
+            }
         }
 
         item { SchedaDisponibile(stato) }
@@ -94,18 +165,38 @@ fun ContiScreen(viewModel: ContiViewModel, modifier: Modifier = Modifier) {
         if (stato.spendibili.isNotEmpty()) {
             item { Sezione("Spendibili", stato.totali.available) }
             items(stato.spendibili, key = { it.id }) { conto ->
-                RigaConto(conto, stato.saldo(conto))
+                RigaConto(conto, stato.saldo(conto)) { scelto = conto }
             }
         }
 
         if (stato.vincolati.isNotEmpty()) {
             item { Sezione("Vincolati", stato.totali.constrained) }
             items(stato.vincolati, key = { it.id }) { conto ->
-                RigaConto(conto, stato.saldo(conto))
+                RigaConto(conto, stato.saldo(conto)) { scelto = conto }
             }
         }
 
         item { Spacer(Modifier.height(96.dp)) }
+    }
+
+    scelto?.let { conto ->
+        FoglioConto(
+            conto = conto,
+            saldo = stato.saldo(conto),
+            altriConti = stato.tutti.filter { it.id != conto.id },
+            onChiudi = { scelto = null },
+            viewModel = viewModel,
+        )
+    }
+
+    if (nuovoConto) {
+        FoglioNuovoConto(
+            onChiudi = { nuovoConto = false },
+            onConferma = { nome, colore, icona, vincolato, apertura ->
+                viewModel.nuovo(nome, colore, icona, vincolato, apertura)
+                nuovoConto = false
+            },
+        )
     }
 }
 
@@ -144,7 +235,7 @@ private fun SchedaDisponibile(stato: StatoConti) {
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Icon(
-                    it.quadra.ui.Icone.Lucchetto,
+                    Icone.Lucchetto,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(14.dp),
@@ -177,10 +268,10 @@ private fun Sezione(titolo: String, totale: Money) {
 }
 
 @Composable
-private fun RigaConto(conto: Account, saldo: Money) {
+private fun RigaConto(conto: Account, saldo: Money, onClick: () -> Unit) {
     val colore = Color(conto.colorArgb)
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -206,6 +297,383 @@ private fun RigaConto(conto: Account, saldo: Money) {
             style = MaterialTheme.typography.titleMedium.tabular,
             color = if (saldo.isZero) MaterialTheme.colorScheme.onSurfaceVariant
             else MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+/** I passi in cui può trovarsi il foglio di un conto. */
+private enum class Passo { AZIONI, TRASFERIMENTO, ALLINEA, MODIFICA }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FoglioConto(
+    conto: Account,
+    saldo: Money,
+    altriConti: List<Account>,
+    onChiudi: () -> Unit,
+    viewModel: ContiViewModel,
+) {
+    var passo by remember { mutableStateOf(Passo.AZIONI) }
+
+    ModalBottomSheet(
+        onDismissRequest = onChiudi,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            Modifier.padding(horizontal = 18.dp).padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Intestazione(conto, saldo)
+
+            when (passo) {
+                Passo.AZIONI -> Azioni(
+                    trasferibile = altriConti.isNotEmpty(),
+                    onTrasferisci = { passo = Passo.TRASFERIMENTO },
+                    onAllinea = { passo = Passo.ALLINEA },
+                    onModifica = { passo = Passo.MODIFICA },
+                )
+
+                Passo.TRASFERIMENTO -> PassoTrasferimento(conto, altriConti) { destinazione, importo ->
+                    viewModel.trasferisci(conto, destinazione, importo)
+                    onChiudi()
+                }
+
+                Passo.ALLINEA -> PassoAllinea(saldo) { reale ->
+                    viewModel.allinea(conto, reale)
+                    onChiudi()
+                }
+
+                Passo.MODIFICA -> PassoModifica(
+                    conto = conto,
+                    onSalva = { viewModel.salva(it); onChiudi() },
+                    onRimuovi = { viewModel.rimuovi(conto); onChiudi() },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Intestazione(conto: Account, saldo: Money) {
+    val colore = Color(conto.colorArgb)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(colore.copy(alpha = 0.18f))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(32.dp).clip(RoundedCornerShape(11.dp))
+                .background(colore.copy(alpha = 0.30f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(iconFor(conto.icon), contentDescription = null, tint = colore, modifier = Modifier.size(17.dp))
+        }
+        Text(
+            conto.name,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            saldo.format(),
+            style = MaterialTheme.typography.titleMedium.tabular,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+/**
+ * Tre azioni, non sei.
+ *
+ * Manca "Preleva" perché prelevare al bancomat è un trasferimento verso i contanti: due
+ * nomi per la stessa cosa costringono solo a scegliere ogni volta. E manca "Bilancio",
+ * sostituito da "Allinea saldo", che invece di riscrivere il numero genera la differenza
+ * come movimento.
+ */
+@Composable
+private fun Azioni(
+    trasferibile: Boolean,
+    onTrasferisci: () -> Unit,
+    onAllinea: () -> Unit,
+    onModifica: () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        Bottone(Icone.Scambio, "Trasferisci", extra.brandEnd, trasferibile, Modifier.weight(1f), onTrasferisci)
+        Bottone(Icone.Spunta, "Allinea saldo", extra.brandStart, true, Modifier.weight(1f), onAllinea)
+        Bottone(Icone.Matita, "Modifica", MaterialTheme.colorScheme.onSurfaceVariant, true, Modifier.weight(1f), onModifica)
+    }
+    if (!trasferibile) {
+        Text(
+            "Per trasferire serve almeno un altro conto.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun Bottone(
+    icona: androidx.compose.ui.graphics.vector.ImageVector,
+    testo: String,
+    colore: Color,
+    abilitato: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(17.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(enabled = abilitato, onClick = onClick)
+            .padding(vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        Icon(
+            icona,
+            contentDescription = null,
+            tint = if (abilitato) colore else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            modifier = Modifier.size(22.dp),
+        )
+        Text(
+            testo,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun PassoTrasferimento(
+    da: Account,
+    altri: List<Account>,
+    onConferma: (Account, Money) -> Unit,
+) {
+    var destinazione by remember { mutableStateOf(altri.firstOrNull()) }
+    var cifre by remember { mutableStateOf("") }
+    val importo = Money(cifre.toLongOrNull() ?: 0L)
+
+    Text("Verso quale conto", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    ChipRow(
+        voci = altri,
+        scelta = destinazione,
+        etichetta = { it.name },
+        colore = { Color(it.colorArgb) },
+        onScelta = { destinazione = it },
+    )
+    ImportoGrande(importo)
+    Tastierino(
+        onCifra = { c -> if (cifre.length < 9) cifre += c },
+        onCancella = { cifre = cifre.dropLast(1) },
+    )
+    val pronto = !importo.isZero && destinazione != null
+    Azione("Trasferisci", extra.brandEnd, pronto) {
+        destinazione?.let { onConferma(it, importo) }
+    }
+    Text(
+        "Il denaro si sposta ma non viene speso: il trasferimento non entra nei totali " +
+            "di spesa né nelle statistiche.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/**
+ * Si scrive quanto si ha davvero, non la differenza.
+ *
+ * È il punto dell'operazione: guardi l'app della banca, leggi il numero, lo scrivi. Il
+ * calcolo lo fa l'app e te lo mostra prima di confermare, così lo controlli senza mai
+ * fare una sottrazione a mente.
+ */
+@Composable
+private fun PassoAllinea(saldoAttuale: Money, onConferma: (Money) -> Unit) {
+    var cifre by remember { mutableStateOf("") }
+    val reale = Money(cifre.toLongOrNull() ?: 0L)
+    val differenza = reale - saldoAttuale
+    val scritto = cifre.isNotEmpty()
+
+    Row(Modifier.fillMaxWidth()) {
+        Text(
+            "Secondo l'app hai",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            saldoAttuale.format(),
+            style = MaterialTheme.typography.bodyMedium.tabular,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+    Text(
+        "Quanto hai davvero adesso?",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    ImportoGrande(reale)
+
+    if (scritto && !differenza.isZero) {
+        val colore = if (differenza.isExpense) MaterialTheme.colorScheme.error else extra.income
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(17.dp))
+                .background(colore.copy(alpha = 0.16f))
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (differenza.isExpense) "Rettifica in meno" else "Rettifica in più",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    "Diventa un movimento",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                differenza.format(withSign = true),
+                style = MaterialTheme.typography.titleMedium.tabular,
+                color = colore,
+            )
+        }
+    }
+
+    Tastierino(
+        onCifra = { c -> if (cifre.length < 9) cifre += c },
+        onCancella = { cifre = cifre.dropLast(1) },
+    )
+    Azione("Allinea", extra.brandEnd, scritto && !differenza.isZero) { onConferma(reale) }
+}
+
+@Composable
+private fun PassoModifica(
+    conto: Account,
+    onSalva: (Account) -> Unit,
+    onRimuovi: () -> Unit,
+) {
+    var nome by remember { mutableStateOf(conto.name) }
+    var colore by remember { mutableStateOf(conto.colorArgb) }
+    var icona by remember { mutableStateOf(conto.icon ?: "wallet") }
+    var vincolato by remember { mutableStateOf(!conto.includedInTotal) }
+
+    CampoTesto(nome, "Nome del conto") { nome = it }
+    SceltaColore(colore) { colore = it }
+    SceltaIcona(icona, Color(colore)) { icona = it }
+    InterruttoreVincolato(vincolato) { vincolato = it }
+
+    Azione("Salva", extra.brandEnd, nome.isNotBlank()) {
+        onSalva(
+            conto.copy(
+                name = nome.trim(),
+                colorArgb = colore,
+                icon = icona,
+                includedInTotal = !vincolato,
+            )
+        )
+    }
+    Azione("Elimina", MaterialTheme.colorScheme.error, onClick = onRimuovi)
+    Text(
+        "Se il conto ha già dei movimenti non viene cancellato ma archiviato, così quei " +
+            "movimenti restano corretti.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FoglioNuovoConto(
+    onChiudi: () -> Unit,
+    onConferma: (String, Int, String, Boolean, Money) -> Unit,
+) {
+    var nome by remember { mutableStateOf("") }
+    var colore by remember { mutableStateOf(TAVOLOZZA.first()) }
+    var icona by remember { mutableStateOf("wallet") }
+    var vincolato by remember { mutableStateOf(false) }
+    var cifre by remember { mutableStateOf("") }
+    val apertura = Money(cifre.toLongOrNull() ?: 0L)
+
+    ModalBottomSheet(
+        onDismissRequest = onChiudi,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            Modifier.padding(horizontal = 18.dp).padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text("Nuovo conto", style = MaterialTheme.typography.titleMedium)
+            CampoTesto(nome, "Nome del conto") { nome = it }
+            SceltaColore(colore) { colore = it }
+            SceltaIcona(icona, Color(colore)) { icona = it }
+            InterruttoreVincolato(vincolato) { vincolato = it }
+
+            Text(
+                "Quanto c'è dentro adesso",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            ImportoGrande(apertura)
+            Tastierino(
+                onCifra = { c -> if (cifre.length < 9) cifre += c },
+                onCancella = { cifre = cifre.dropLast(1) },
+            )
+            Azione("Crea", extra.brandEnd, nome.isNotBlank()) {
+                onConferma(nome.trim(), colore, icona, vincolato, apertura)
+            }
+        }
+    }
+}
+
+/**
+ * L'interruttore che decide se il conto entra nella disponibilità.
+ *
+ * Nasce da un caso concreto: una carta per un sussidio contiene denaro che non si può
+ * spendere per quello che si vuole. Sommarlo alla disponibilità fa credere di avere più
+ * di quanto si ha, ma nasconderlo del tutto lo farebbe dimenticare — per questo resta
+ * visibile in un totale separato invece che sparire.
+ */
+@Composable
+private fun InterruttoreVincolato(vincolato: Boolean, onCambia: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                "Denaro vincolato",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                "Resta visibile ma fuori dalla disponibilità",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = vincolato,
+            onCheckedChange = onCambia,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = extra.brandEnd,
+                checkedTrackColor = extra.brandEnd.copy(alpha = 0.35f),
+            ),
         )
     }
 }

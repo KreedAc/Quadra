@@ -9,14 +9,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -32,7 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -43,6 +40,11 @@ import it.quadra.core.model.CategoryKind
 import it.quadra.data.LedgerRepository
 import it.quadra.ui.ICONE_SCEGLIBILI
 import it.quadra.ui.Icone
+import it.quadra.ui.common.Azione
+import it.quadra.ui.common.CampoTesto
+import it.quadra.ui.common.SceltaColore
+import it.quadra.ui.common.SceltaIcona
+import it.quadra.ui.common.TAVOLOZZA
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
 import kotlinx.coroutines.flow.SharingStarted
@@ -51,12 +53,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
-
-/** La tavolozza fra cui scegliere. Sono le stesse tinte verificate per il tema scuro. */
-private val TAVOLOZZA = listOf(
-    0xFF12A374, 0xFF8B5CF6, 0xFFE85545, 0xFF0E93AE,
-    0xFFB07F0A, 0xFF3B7BE8, 0xFFDB4F92, 0xFF6E9E2F, 0xFF6B7A89,
-).map { it.toInt() }
 
 data class StatoCategorie(val tutte: List<Category> = emptyList()) {
     val principali: List<Category>
@@ -309,7 +305,7 @@ private fun FoglioModifica(
             Modifier.padding(horizontal = 18.dp).padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            CampoNome(nome) { nome = it }
+            CampoTesto(nome, "Nome") { nome = it }
 
             // Colore e icona solo al primo livello: le sottocategorie li ereditano dalla
             // madre, ed è quello che le tiene riconoscibili come famiglia.
@@ -348,7 +344,7 @@ private fun FoglioNome(titolo: String, onChiudi: () -> Unit, onConferma: (String
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(titolo, style = MaterialTheme.typography.titleMedium)
-            CampoNome(nome) { nome = it }
+            CampoTesto(nome, "Nome") { nome = it }
             Azione("Aggiungi", extra.brandEnd) { if (nome.isNotBlank()) onConferma(nome.trim()) }
         }
     }
@@ -374,107 +370,14 @@ private fun FoglioNuovaCategoria(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text("Nuova categoria", style = MaterialTheme.typography.titleMedium)
-            CampoNome(nome) { nome = it }
+            CampoTesto(nome, "Nome") { nome = it }
             SceltaColore(colore) { colore = it }
-            SceltaIcona(icona, Color(colore)) { icona = it ?: ICONE_SCEGLIBILI.first() }
+            SceltaIcona(icona, Color(colore)) { icona = it }
             Azione("Crea", extra.brandEnd) { if (nome.isNotBlank()) onConferma(nome.trim(), colore, icona) }
         }
     }
 }
 
-@Composable
-private fun CampoNome(valore: String, onCambia: (String) -> Unit) {
-    BasicTextField(
-        value = valore,
-        onValueChange = onCambia,
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-        cursorBrush = SolidColor(extra.brandEnd),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(15.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 14.dp, vertical = 14.dp),
-        decorationBox = { campo ->
-            if (valore.isEmpty()) {
-                Text(
-                    "Nome",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            campo()
-        },
-    )
-}
 
-@Composable
-private fun SceltaColore(scelto: Int, onScelta: (Int) -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        items(TAVOLOZZA) { colore ->
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(99.dp))
-                    .background(Color(colore))
-                    .clickable { onScelta(colore) },
-                contentAlignment = Alignment.Center,
-            ) {
-                if (colore == scelto) {
-                    Icon(
-                        Icone.Spunta,
-                        contentDescription = "Scelto",
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
-        }
-    }
-}
 
-@Composable
-private fun SceltaIcona(scelta: String?, colore: Color, onScelta: (String?) -> Unit) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(9.dp),
-        modifier = Modifier.heightIn(max = 56.dp),
-    ) {
-        items(ICONE_SCEGLIBILI) { chiave ->
-            val attiva = chiave == scelta
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(15.dp))
-                    .background(
-                        if (attiva) colore.copy(alpha = 0.28f)
-                        else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                    .clickable { onScelta(chiave) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    iconFor(chiave),
-                    contentDescription = null,
-                    tint = if (attiva) colore else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-        }
-    }
-}
 
-@Composable
-private fun Azione(testo: String, colore: Color, onClick: () -> Unit) {
-    Text(
-        testo,
-        style = MaterialTheme.typography.titleMedium,
-        color = colore,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(colore.copy(alpha = 0.14f))
-            .clickable(onClick = onClick)
-            .padding(vertical = 15.dp),
-        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-    )
-}
