@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.quadra.core.ledger.Ledger
 import it.quadra.core.model.Account
-import it.quadra.core.model.Account
 import it.quadra.core.model.Category
 import it.quadra.core.model.Money
 import it.quadra.core.model.Transaction
