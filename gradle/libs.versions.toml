@@ -1,14 +1,51 @@
 [versions]
-kotlin = "2.4.10"
+# ── Verificate ────────────────────────────────────────────────────────────────
+# Disponibili su Maven Central e sul Gradle Plugin Portal, e :core compila con queste.
+kotlin = "2.2.21"
+ksp = "2.2.21-2.0.5"          # la parte prima del trattino DEVE combaciare con kotlin
 kotlinxSerialization = "1.11.0"
-# Bytecode target del modulo :core. Deve restare compatibile con quello che
-# l'Android Gradle Plugin accetta: 17 è il valore sicuro per AGP 8.x.
-jvmTarget = "17"
+kotlinxCoroutines = "1.10.2"
+jvmTarget = "17"               # bytecode di :core, compatibile con l'Android Gradle Plugin
+
+# ── Da confermare al primo sync ───────────────────────────────────────────────
+# Questi artefatti vivono solo su Google Maven e non sono stati verificati.
+# Se Android Studio si lamenta al primo sync, la correzione è QUI e solo qui:
+# lo studio propone la versione giusta nel messaggio d'errore.
+agp = "8.13.0"
+composeBom = "2025.09.00"
+room = "2.7.2"
+activityCompose = "1.10.1"
+lifecycle = "2.9.0"
+navigationCompose = "2.9.0"
+coreKtx = "1.16.0"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+android-application = { id = "com.android.application", version.ref = "agp" }

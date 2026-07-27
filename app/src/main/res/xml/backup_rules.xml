@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup automatico di sistema (API 26-30). È una rete di sicurezza gratuita, non la
+  difesa principale: non è lanciabile dall'utente e il ripristino avviene solo
+  all'installazione. La difesa vera è l'export manuale.
+  I file collaterali di SQLite in modalità WAL sono esclusi: copiarli nel momento
+  sbagliato ripristinerebbe un database incoerente.
+-->
+<full-backup-content>
+    <include domain="database" path="lemiespese.db" />
+    <exclude domain="database" path="lemiespese.db-wal" />
+    <exclude domain="database" path="lemiespese.db-shm" />
+    <exclude domain="database" path="lemiespese.db-journal" />
+</full-backup-content>
