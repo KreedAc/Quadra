@@ -4,12 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material.icons.rounded.AccountBalanceWallet
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.BarChart
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +28,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import it.quadra.data.LedgerRepository
+import it.quadra.ui.categorie.CategorieScreen
+import it.quadra.ui.categorie.CategorieViewModel
 import it.quadra.ui.conti.ContiScreen
 import it.quadra.ui.conti.ContiViewModel
 import it.quadra.ui.impostazioni.ImpostazioniScreen
@@ -51,10 +47,10 @@ import it.quadra.ui.theme.extra
  * illeggibili e la barra smette di essere memorizzabile a colpo d'occhio.
  */
 enum class Destinazione(val etichetta: String, val icona: ImageVector) {
-    MOVIMENTI("Movimenti", Icons.AutoMirrored.Rounded.List),
-    CONTI("Conti", Icons.Rounded.AccountBalanceWallet),
-    STATISTICHE("Statistiche", Icons.Rounded.BarChart),
-    IMPOSTAZIONI("Impostazioni", Icons.Rounded.Tune),
+    MOVIMENTI("Movimenti", Icone.Elenco),
+    CONTI("Conti", Icone.Portafoglio),
+    STATISTICHE("Statistiche", Icone.Grafico),
+    IMPOSTAZIONI("Impostazioni", Icone.Cursori),
 }
 
 /** Fabbrica minima: evita di ripetere l'oggetto anonimo a ogni ViewModel. */
@@ -74,11 +70,13 @@ class Fabbrica<T : ViewModel>(private val costruisci: () -> T) : ViewModelProvid
 fun Root(repository: LedgerRepository) {
     var destinazione by remember { mutableStateOf(Destinazione.MOVIMENTI) }
     var foglioAperto by remember { mutableStateOf(false) }
+    var categorieAperte by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
 
     val movimentiVM: MovimentiViewModel = viewModel(factory = Fabbrica { MovimentiViewModel(repository) })
     val contiVM: ContiViewModel = viewModel(factory = Fabbrica { ContiViewModel(repository) })
     val statisticheVM: StatisticheViewModel = viewModel(factory = Fabbrica { StatisticheViewModel(repository) })
+    val categorieVM: CategorieViewModel = viewModel(factory = Fabbrica { CategorieViewModel(repository) })
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -108,7 +106,7 @@ fun Root(repository: LedgerRepository) {
         floatingActionButton = {
             // Il pulsante compare solo dove ha senso: registrare una spesa dalla
             // schermata delle impostazioni non vuol dire niente.
-            if (destinazione == Destinazione.MOVIMENTI) {
+            if (destinazione == Destinazione.MOVIMENTI && !categorieAperte) {
                 FloatingActionButton(
                     onClick = { foglioAperto = true },
                     containerColor = Color.Transparent,
@@ -116,17 +114,25 @@ fun Root(repository: LedgerRepository) {
                     shape = RoundedCornerShape(19.dp),
                     modifier = Modifier.background(extra.brand, RoundedCornerShape(19.dp)),
                 ) {
-                    Icon(Icons.Rounded.Add, contentDescription = "Aggiungi una spesa")
+                    Icon(Icone.Piu, contentDescription = "Aggiungi una spesa")
                 }
             }
         },
     ) { insets ->
         val contenuto = Modifier.fillMaxSize().padding(insets)
-        when (destinazione) {
-            Destinazione.MOVIMENTI -> MovimentiScreen(movimentiVM, snackbar, contenuto)
-            Destinazione.CONTI -> ContiScreen(contiVM, contenuto)
-            Destinazione.STATISTICHE -> StatisticheScreen(statisticheVM, contenuto)
-            Destinazione.IMPOSTAZIONI -> ImpostazioniScreen(contenuto)
+        when {
+            categorieAperte -> CategorieScreen(
+                viewModel = categorieVM,
+                onIndietro = { categorieAperte = false },
+                modifier = contenuto,
+            )
+            destinazione == Destinazione.MOVIMENTI -> MovimentiScreen(movimentiVM, snackbar, contenuto)
+            destinazione == Destinazione.CONTI -> ContiScreen(contiVM, contenuto)
+            destinazione == Destinazione.STATISTICHE -> StatisticheScreen(statisticheVM, contenuto)
+            destinazione == Destinazione.IMPOSTAZIONI -> ImpostazioniScreen(
+                onApriCategorie = { categorieAperte = true },
+                modifier = contenuto,
+            )
         }
     }
 

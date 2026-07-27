@@ -18,8 +18,6 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -300,7 +298,7 @@ private fun Tastierino(onCifra: (Char) -> Unit, onCancella: () -> Unit) {
                         when (tasto) {
                             ' ' -> Unit
                             '<' -> Icon(
-                                Icons.AutoMirrored.Rounded.Backspace,
+                                it.quadra.ui.Icone.Cancella,
                                 contentDescription = "Cancella una cifra",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(21.dp),

@@ -68,8 +68,6 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.material3)
-    // Comodità temporanea: pesa parecchio ma R8 in release tiene solo le icone usate.
-    implementation(libs.compose.material.icons.extended)
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.compose.ui.tooling.preview)
 

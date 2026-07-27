@@ -1,20 +1,26 @@
 package it.quadra.ui.impostazioni
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import it.quadra.ui.Icone
 
 /**
  * Impostazioni.
@@ -26,7 +32,7 @@ import androidx.compose.ui.unit.dp
  * Backup, esportazione, gestione dei conti e delle categorie arriveranno qui.
  */
 @Composable
-fun ImpostazioniScreen(modifier: Modifier = Modifier) {
+fun ImpostazioniScreen(onApriCategorie: () -> Unit, modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier.padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -37,6 +43,38 @@ fun ImpostazioniScreen(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(top = 8.dp),
             )
+        }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .clickable(onClick = onApriCategorie)
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Categorie",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Rinomina, ricolora, aggiungi e togli quello che vuoi",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Icon(
+                    Icone.Destra,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
 
         item {
@@ -85,9 +123,8 @@ fun ImpostazioniScreen(modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    "Esportazione e ripristino del backup, gestione dei conti e delle " +
-                        "categorie, spese ricorrenti, trasferimenti fra conti e " +
-                        "allineamento del saldo.",
+                    "Esportazione e ripristino del backup, gestione dei conti, spese " +
+                        "ricorrenti, trasferimenti fra conti e allineamento del saldo.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

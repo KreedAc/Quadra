@@ -172,6 +172,54 @@ class LedgerRepository(private val db: AppDatabase) {
         return adjustment
     }
 
+    // ──────────────────────────────────── categorie e conti personalizzati
+
+    suspend fun salvaCategoria(categoria: Category) {
+        db.categories().upsert(categoria.toEntity())
+    }
+
+    suspend fun salvaConto(conto: Account) {
+        db.accounts().upsert(conto.toEntity())
+    }
+
+    /**
+     * Toglie una categoria dalla circolazione.
+     *
+     * Se è già stata usata da qualche movimento non viene cancellata ma nascosta:
+     * eliminarla lascerebbe quei movimenti a puntare a un identificativo che non esiste
+     * più, e i totali per categoria si romperebbero senza che l'utente capisca perché.
+     * Quelle mai usate spariscono davvero, insieme alle loro sottocategorie.
+     *
+     * @return true se è stata cancellata, false se è stata solo nascosta.
+     */
+    suspend fun rimuoviCategoria(categoria: Category): Boolean {
+        val figlie = db.categories().observeAll().first()
+            .map { it.toDomain() }
+            .filter { it.parentId == categoria.id }
+        val famiglia = (figlie + categoria).map { it.id }
+        val usata = db.transactions().observeAll().first().any { it.categoryId in famiglia }
+
+        return if (usata) {
+            (figlie + categoria).forEach { salvaCategoria(it.copy(hidden = true)) }
+            false
+        } else {
+            db.categories().deleteByIds(famiglia)
+            true
+        }
+    }
+
+    /** Come [rimuoviCategoria], ma per i conti: archiviati se usati, cancellati se mai visti. */
+    suspend fun rimuoviConto(conto: Account): Boolean {
+        val usato = db.transactions().observeAll().first().any { it.accountId == conto.id }
+        return if (usato) {
+            salvaConto(conto.copy(archived = true))
+            false
+        } else {
+            db.accounts().delete(conto.toEntity())
+            true
+        }
+    }
+
     // ───────────────────────────────────────────── primo avvio e ricorrenti
 
     /**

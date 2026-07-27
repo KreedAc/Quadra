@@ -16,9 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
@@ -108,14 +105,14 @@ private fun SelettoreMese(stato: StatoMovimenti, viewModel: MovimentiViewModel) 
             modifier = Modifier.weight(1f),
         )
         Icon(
-            Icons.Rounded.ChevronLeft,
+            it.quadra.ui.Icone.Sinistra,
             contentDescription = "Mese precedente",
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(28.dp).clickable { viewModel.mesePrecedente() },
         )
         Spacer(Modifier.size(12.dp))
         Icon(
-            Icons.Rounded.ChevronRight,
+            it.quadra.ui.Icone.Destra,
             contentDescription = "Mese successivo",
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(28.dp).clickable { viewModel.meseSuccessivo() },
