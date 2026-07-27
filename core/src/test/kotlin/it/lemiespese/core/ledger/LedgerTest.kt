@@ -176,6 +176,19 @@ class LedgerTest {
     }
 
     @Test
+    fun `l'utente scrive il saldo reale, mai la differenza`() {
+        // È il punto di tutta l'operazione: guardi l'app della banca, leggi il numero,
+        // lo scrivi. Il calcolo — comprese le virgole, che a mente sono la parte
+        // fastidiosa — lo fa la funzione.
+        val movimenti = listOf(spesa(-12463, "carta"))   // saldo calcolato: 375,37
+        val rettifica = Ledger.reconcile(carta, movimenti, Money.of(362, 92), oggi, "r")
+
+        assertNotNull(rettifica)
+        assertEquals(Money.of(-12, 45), rettifica.amount)
+        assertEquals(Money.of(362, 92), Ledger.balanceOf(carta, movimenti + rettifica))
+    }
+
+    @Test
     fun `la rettifica funziona anche in aumento`() {
         val rettifica = Ledger.reconcile(carta, emptyList(), Money.of(520), oggi, "r")
         assertNotNull(rettifica)
