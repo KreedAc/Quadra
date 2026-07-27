@@ -46,6 +46,12 @@ class LedgerRepository(private val db: AppDatabase) {
     fun observeAllTransactions(): Flow<List<Transaction>> =
         db.transactions().observeAll().map { list -> list.map { it.toDomain() } }
 
+    /** Saldo di ogni conto, ricalcolato a ogni variazione. Mai memorizzato. */
+    fun observeBalances(): Flow<Map<String, Money>> =
+        combine(observeAccounts(), observeAllTransactions()) { accounts, transactions ->
+            Ledger.balances(accounts, transactions)
+        }
+
     /** Disponibile e vincolato, ricalcolati a ogni variazione di conti o movimenti. */
     fun observeTotals(): Flow<Totals> =
         combine(observeAccounts(), observeAllTransactions()) { accounts, transactions ->

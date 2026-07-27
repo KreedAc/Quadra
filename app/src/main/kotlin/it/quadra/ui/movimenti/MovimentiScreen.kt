@@ -1,7 +1,7 @@
 package it.quadra.ui.movimenti
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -18,25 +17,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,7 +39,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.quadra.core.model.Category
 import it.quadra.core.model.Transaction
 import it.quadra.ui.iconFor
-import it.quadra.ui.inserimento.AggiungiSheet
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
 import java.time.LocalDate
@@ -58,17 +48,18 @@ import java.util.Locale
 private val formatoGiorno = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ITALIAN)
 private val formatoMese = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MovimentiScreen(viewModel: MovimentiViewModel) {
+fun MovimentiScreen(
+    viewModel: MovimentiViewModel,
+    snackbar: SnackbarHostState,
+    modifier: Modifier = Modifier,
+) {
     val stato by viewModel.stato.collectAsStateWithLifecycle()
     val cancellazione by viewModel.cancellazione.collectAsStateWithLifecycle()
-    val snackbar = remember { SnackbarHostState() }
-    var foglioAperto by remember { mutableStateOf(false) }
 
     // La finestra per tornare indietro. Passata questa, non resta traccia da nessuna parte.
     LaunchedEffect(cancellazione) {
-        val inCorso = cancellazione ?: return@LaunchedEffect
+        cancellazione ?: return@LaunchedEffect
         val esito = snackbar.showSnackbar(
             message = "Movimento eliminato",
             actionLabel = "ANNULLA",
@@ -78,62 +69,28 @@ fun MovimentiScreen(viewModel: MovimentiViewModel) {
         else viewModel.scartaAnnullamento()
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbar) },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { foglioAperto = true },
-                containerColor = Color.Transparent,
-                contentColor = Color(0xFF04121A),
-                shape = RoundedCornerShape(19.dp),
-                modifier = Modifier.background(extra.brand, RoundedCornerShape(19.dp)),
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Aggiungi una spesa")
-            }
-        },
-    ) { insets ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(insets)
-                .padding(horizontal = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-        ) {
-            item { SelettoreMese(stato, viewModel) }
-            item { SchedaSpeso(stato) }
+    LazyColumn(
+        modifier = modifier.padding(horizontal = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        item { SelettoreMese(stato, viewModel) }
+        item { SchedaSpeso(stato) }
 
-            stato.giornate.forEach { giornata ->
-                item(key = "giorno-${giornata.data}") {
-                    IntestazioneGiorno(giornata)
-                }
-                items(giornata.movimenti, key = { it.id }) { movimento ->
-                    RigaMovimento(
-                        movimento = movimento,
-                        categoria = stato.categoria(movimento.categoryId),
-                        onLongClick = { viewModel.cancella(movimento) },
-                    )
-                }
+        stato.giornate.forEach { giornata ->
+            item(key = "giorno-${giornata.data}") { IntestazioneGiorno(giornata) }
+            items(giornata.movimenti, key = { it.id }) { movimento ->
+                RigaMovimento(
+                    movimento = movimento,
+                    categoria = stato.categoria(movimento.categoryId),
+                    onLongClick = { viewModel.cancella(movimento) },
+                )
             }
-
-            if (stato.caricato && stato.giornate.isEmpty()) {
-                item { StatoVuoto() }
-            }
-            item { Spacer(Modifier.height(96.dp)) }
         }
-    }
 
-    if (foglioAperto) {
-        AggiungiSheet(
-            categorie = stato.categoriePrincipali,
-            conti = stato.conti,
-            tutteLeCategorie = stato.categorie,
-            onChiudi = { foglioAperto = false },
-            onSalva = { importo, categoriaId, contoId ->
-                viewModel.aggiungi(importo, categoriaId, contoId)
-                foglioAperto = false
-            },
-        )
+        if (stato.caricato && stato.giornate.isEmpty()) {
+            item { StatoVuoto() }
+        }
+        item { Spacer(Modifier.height(96.dp)) }
     }
 }
 
@@ -284,6 +241,12 @@ private fun StatoVuoto() {
         Text(
             "Tocca + per registrare la prima spesa",
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Tieni premuto su un movimento per eliminarlo",
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
