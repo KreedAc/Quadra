@@ -28,6 +28,9 @@ interface AccountDao {
 
     @Delete
     suspend fun delete(account: AccountEntity)
+
+    @Query("DELETE FROM accounts")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -46,6 +49,9 @@ interface CategoryDao {
 
     @Query("DELETE FROM categories WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: Collection<String>)
+
+    @Query("DELETE FROM categories")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -88,6 +94,9 @@ interface TransactionDao {
     @Query("DELETE FROM transactions WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: Collection<String>)
 
+    @Query("DELETE FROM transactions")
+    suspend fun deleteAll()
+
     /**
      * Cancella insieme tutte le gambe di un trasferimento.
      *
@@ -119,4 +128,10 @@ interface RecurringRuleDao {
 
     @Delete
     suspend fun delete(rule: RecurringRuleEntity)
+
+    @Query("DELETE FROM recurring_rules")
+    suspend fun deleteAll()
+
+    @Upsert
+    suspend fun upsert(rules: List<RecurringRuleEntity>)
 }

@@ -10,7 +10,10 @@ plugins {
 // in millisecondi, senza emulatore. Lo strato Android sopra deve limitarsi a
 // persistenza (Room), UI (Compose) e I/O di sistema.
 dependencies {
-    implementation(libs.kotlinx.serialization.json)
+    // `api` e non `implementation`: BackupDocument è @Serializable, quindi la sua
+    // interfaccia pubblica nomina tipi di kotlinx.serialization. Chi lo usa da :app
+    // deve poterli vedere in compilazione, non solo a runtime.
+    api(libs.kotlinx.serialization.json)
     testImplementation(libs.kotlin.test)
 }
 

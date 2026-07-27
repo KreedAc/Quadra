@@ -1,5 +1,9 @@
 package it.quadra.data
 
+import androidx.room.withTransaction
+import it.quadra.core.backup.Backup
+import it.quadra.core.backup.Backup.toDomain
+import it.quadra.core.backup.BackupDocument
 import it.quadra.core.ledger.Edits
 import it.quadra.core.ledger.Ledger
 import it.quadra.core.ledger.Totals
@@ -218,6 +222,48 @@ class LedgerRepository(private val db: AppDatabase) {
             db.accounts().delete(conto.toEntity())
             true
         }
+    }
+
+    // ──────────────────────────────────────────────────────────── backup
+
+    /**
+     * Tutto quello che c'è, in un file JSON leggibile.
+     *
+     * L'utente sceglie dove metterlo col selettore di sistema: Drive, Dropbox, la
+     * memoria del telefono, una chiavetta. Il file è suo e va dove decide lui, senza
+     * che l'app chieda un permesso o un accesso alla rete.
+     */
+    suspend fun esporta(): String {
+        val documento = Backup.componi(
+            conti = db.accounts().observeAll().first().map { it.toDomain() },
+            categorie = db.categories().observeAll().first().map { it.toDomain() },
+            movimenti = db.transactions().observeAll().first().map { it.toDomain() },
+            ricorrenti = db.recurringRules().observeAll().first().map { it.toDomain() },
+        )
+        return Backup.scrivi(documento)
+    }
+
+    /**
+     * Rimpiazza tutto il contenuto con quello del backup.
+     *
+     * È una sostituzione e non una fusione, ed è una scelta: fondere due archivi
+     * significa decidere cosa fare quando lo stesso movimento esiste da entrambe le
+     * parti con importi diversi, e qualunque regola si scelga produce sorprese. Un
+     * ripristino che rimpiazza è prevedibile — l'utente sa esattamente cosa avrà dopo.
+     *
+     * Avviene dentro una transazione: se qualcosa va storto a metà, il database resta
+     * com'era invece di ritrovarsi mezzo vuoto.
+     */
+    suspend fun ripristina(documento: BackupDocument) = db.withTransaction {
+        db.transactions().deleteAll()
+        db.recurringRules().deleteAll()
+        db.categories().deleteAll()
+        db.accounts().deleteAll()
+
+        db.accounts().upsert(documento.conti.map { it.toDomain().toEntity() })
+        db.categories().upsert(documento.categorie.map { it.toDomain().toEntity() })
+        db.transactions().upsert(documento.movimenti.map { it.toDomain().toEntity() })
+        db.recurringRules().upsert(documento.ricorrenti.map { it.toDomain().toEntity() })
     }
 
     // ───────────────────────────────────────────── primo avvio e ricorrenti

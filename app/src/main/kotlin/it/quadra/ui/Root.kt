@@ -33,6 +33,7 @@ import it.quadra.ui.categorie.CategorieViewModel
 import it.quadra.ui.conti.ContiScreen
 import it.quadra.ui.conti.ContiViewModel
 import it.quadra.ui.impostazioni.ImpostazioniScreen
+import it.quadra.ui.impostazioni.ImpostazioniViewModel
 import it.quadra.ui.inserimento.AggiungiSheet
 import it.quadra.ui.movimenti.MovimentiScreen
 import it.quadra.ui.movimenti.MovimentiViewModel
@@ -77,6 +78,7 @@ fun Root(repository: LedgerRepository) {
     val contiVM: ContiViewModel = viewModel(factory = Fabbrica { ContiViewModel(repository) })
     val statisticheVM: StatisticheViewModel = viewModel(factory = Fabbrica { StatisticheViewModel(repository) })
     val categorieVM: CategorieViewModel = viewModel(factory = Fabbrica { CategorieViewModel(repository) })
+    val impostazioniVM: ImpostazioniViewModel = viewModel(factory = Fabbrica { ImpostazioniViewModel(repository) })
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -130,6 +132,8 @@ fun Root(repository: LedgerRepository) {
             destinazione == Destinazione.CONTI -> ContiScreen(contiVM, contenuto)
             destinazione == Destinazione.STATISTICHE -> StatisticheScreen(statisticheVM, contenuto)
             destinazione == Destinazione.IMPOSTAZIONI -> ImpostazioniScreen(
+                viewModel = impostazioniVM,
+                snackbar = snackbar,
                 onApriCategorie = { categorieAperte = true },
                 modifier = contenuto,
             )
