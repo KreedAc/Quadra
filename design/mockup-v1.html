@@ -560,6 +560,35 @@
   .acct-row .bal { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .acct-row .bal--zero { color: var(--ink-lo); font-weight: 500; }
 
+  .field {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 0; border-bottom: 1px solid var(--hairline);
+  }
+  .field:last-child { border-bottom: 0; }
+  .field .k { font-size: 12.5px; color: var(--ink-lo); width: 74px; flex: none; }
+  .field .v {
+    flex: 1; font-size: 14.5px; font-weight: 500;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .field .chev { color: var(--ink-lo); flex: none; transform: rotate(-90deg); }
+  .danger {
+    text-align: center; padding: 13px; border-radius: 17px;
+    font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .snackbar {
+    position: absolute; left: 14px; right: 14px; bottom: 84px;
+    background: #26333F; border-radius: 15px;
+    padding: 12px 8px 12px 14px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 12px 28px -10px rgba(0,0,0,.8);
+  }
+  .snackbar .msg { flex: 1; font-size: 13.5px; color: #E8EEF5; }
+  .snackbar .undo {
+    font-size: 13.5px; font-weight: 700; color: #1FD8A4;
+    letter-spacing: 0.03em; padding: 4px 10px;
+  }
+
   .reconcile {
     display: flex; align-items: center; justify-content: space-between;
     gap: 10px; padding: 12px 14px; border-radius: 17px;
@@ -806,6 +835,11 @@
   <symbol id="ic-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
     <path d="M5.6 3.4h12.8v17.2l-2.1-1.4-2.1 1.4-2.2-1.4-2.1 1.4-2.1-1.4-2.2 1.4Z"/>
     <path d="M8.8 8.2h6.4M8.8 12.2h6.4"/>
+  </symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.8 6.4h16.4"/><path d="M9.4 6.4V4.6a1.2 1.2 0 0 1 1.2-1.2h2.8a1.2 1.2 0 0 1 1.2 1.2v1.8"/>
+    <path d="M6.2 6.4 7 19.6a1.4 1.4 0 0 0 1.4 1.3h7.2a1.4 1.4 0 0 0 1.4-1.3l.8-13.2"/>
+    <path d="M10.4 10.2v6.6M13.6 10.2v6.6"/>
   </symbol>
   <symbol id="ic-transfer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M4 8.6h13.4"/><path d="m14.6 5.4 3.2 3.2-3.2 3.2"/>
@@ -1579,6 +1613,181 @@
             l'app e te la mostra prima di confermare, così la vedi e la controlli senza mai
             fare una sottrazione a mente — che con le virgole di mezzo è la parte fastidiosa.
             Quei 12,50 € diventano un movimento vero, non un numero riscritto.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ══════════════ CORREGGERE E CANCELLARE ══════════════ -->
+  <section>
+    <h2>Sbagliare, e non pagarla</h2>
+    <p class="sub">
+      Si sbaglia sempre: l'importo battuto male, la carta giusta ricordata dopo, la spesa
+      inserita due volte. Un'app che rende faticoso correggere è un'app che si smette di
+      aggiornare, e da lì all'abbandono è un attimo.
+    </p>
+
+    <div class="devices" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));max-width:780px">
+
+      <div class="device-cell">
+        <div class="phone">
+          <div class="screen">
+
+            <div class="statusbar">
+              <span>21:58</span>
+              <span class="icons">
+                <span class="bars"><i></i><i></i><i></i><i></i></span>
+                <span class="batt"><span></span></span>
+              </span>
+            </div>
+
+            <div class="body dimmed">
+              <div class="apptop"><span class="month">Luglio 2026</span></div>
+              <div class="balance">
+                <div class="lbl">Speso questo mese</div>
+                <div class="amount-xl">1.284,60<span class="cur">€</span></div>
+              </div>
+            </div>
+
+            <div class="sheet">
+              <span class="grabber"></span>
+
+              <div class="picked" style="background:color-mix(in oklab, var(--cat-ambra) 18%, transparent)">
+                <span class="box" style="background:color-mix(in oklab, var(--cat-ambra) 30%, transparent); color:var(--cat-ambra)">
+                  <svg width="17" height="17"><use href="#ic-fuel"/></svg>
+                </span>
+                <span class="nm">Q8 Tangenziale</span>
+                <span class="swap">62,00 €</span>
+              </div>
+
+              <div>
+                <div class="field">
+                  <span class="k">Conto</span>
+                  <span class="v">
+                    <span class="dot" style="background:var(--cat-ciano)"></span>Revolut
+                  </span>
+                  <svg class="chev" width="16" height="16"><use href="#ic-chevron"/></svg>
+                </div>
+                <div class="field">
+                  <span class="k">Categoria</span>
+                  <span class="v">
+                    <span class="dot" style="background:var(--cat-ambra)"></span>Trasporti · Carburante
+                  </span>
+                  <svg class="chev" width="16" height="16"><use href="#ic-chevron"/></svg>
+                </div>
+                <div class="field">
+                  <span class="k">Data</span>
+                  <span class="v">Oggi · 26 lug 2026</span>
+                  <svg class="chev" width="16" height="16"><use href="#ic-chevron"/></svg>
+                </div>
+                <div class="field">
+                  <span class="k">Nota</span>
+                  <span class="v" style="color:var(--ink-lo);font-weight:400">Aggiungi una nota</span>
+                  <svg class="chev" width="16" height="16"><use href="#ic-chevron"/></svg>
+                </div>
+              </div>
+
+              <div class="danger" style="background:color-mix(in oklab, var(--cat-corallo) 15%, transparent); color:var(--cat-corallo)">
+                <svg width="17" height="17"><use href="#ic-trash"/></svg>
+                Elimina movimento
+              </div>
+
+              <div class="cta">Salva modifiche</div>
+            </div>
+
+          </div>
+        </div>
+        <div class="caption">
+          <h3>La carta si cambia da qui</h3>
+          <p>
+            Ogni campo è modificabile dal movimento stesso, conto compreso: se l'avevi messo
+            sulla carta sbagliata, lo sposti e i due saldi si aggiustano da soli. Nessuna
+            scrittura di compensazione, perché il saldo non è un numero memorizzato ma la
+            somma dei suoi movimenti.
+          </p>
+        </div>
+      </div>
+
+      <div class="device-cell">
+        <div class="phone">
+          <div class="screen">
+
+            <div class="statusbar">
+              <span>21:58</span>
+              <span class="icons">
+                <span class="bars"><i></i><i></i><i></i><i></i></span>
+                <span class="batt"><span></span></span>
+              </span>
+            </div>
+
+            <div class="body">
+              <div class="apptop">
+                <span class="month">Luglio 2026
+                  <svg width="17" height="17"><use href="#ic-chevron"/></svg>
+                </span>
+              </div>
+
+              <div class="balance">
+                <div class="lbl">Speso questo mese</div>
+                <div class="amount-xl">1.222,60<span class="cur">€</span></div>
+                <div class="track"><i style="width:67.9%"></i></div>
+                <div class="track-legend">
+                  <span>Restano <b>577,40 €</b></span>
+                  <span>su 1.800,00 €</span>
+                </div>
+              </div>
+
+              <div>
+                <div class="daybar"><b>Oggi</b><span>51,20 €</span></div>
+                <div class="rows">
+                  <div class="row">
+                    <span class="avatar" style="background:color-mix(in oklab, var(--cat-verde) 20%, transparent); color:var(--cat-verde)">
+                      <svg width="18" height="18"><use href="#ic-cart"/></svg>
+                    </span>
+                    <span class="txt">
+                      <span class="t1">Esselunga</span>
+                      <span class="t2">Supermercato</span>
+                    </span>
+                    <span class="val">47,80 €</span>
+                  </div>
+                  <div class="row">
+                    <span class="avatar" style="background:color-mix(in oklab, var(--cat-oliva) 22%, transparent); color:var(--cat-oliva)">
+                      <svg width="18" height="18"><use href="#ic-coffee"/></svg>
+                    </span>
+                    <span class="txt">
+                      <span class="t1">Bar Centrale</span>
+                      <span class="t2">Caffè</span>
+                    </span>
+                    <span class="val">3,40 €</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="snackbar">
+              <span class="msg">Movimento eliminato</span>
+              <span class="undo">ANNULLA</span>
+            </div>
+
+            <nav class="nav">
+              <a href="#" class="on"><svg width="21" height="21"><use href="#ic-list"/></svg>Movimenti</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-chart"/></svg>Statistiche</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-repeat"/></svg>Ricorrenti</a>
+              <a href="#"><svg width="21" height="21"><use href="#ic-gear"/></svg>Impostazioni</a>
+            </nav>
+
+          </div>
+        </div>
+        <div class="caption">
+          <h3>Eliminato vuol dire eliminato</h3>
+          <p>
+            La riga sparisce subito, i 62 € tornano nel saldo e il totale del mese scende:
+            nessuna scritta "annullato", nessuna riga barrata. Chi ha sbagliato non vuole un
+            promemoria del proprio errore in mezzo alle spese. La barra in basso dura pochi
+            secondi, ed è l'unica finestra per tornare indietro — dopo non c'è più traccia.
           </p>
         </div>
       </div>

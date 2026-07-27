@@ -17,7 +17,9 @@ import java.time.LocalDate
  *    scivolerebbe silenziosamente al 28 per sempre.
  *
  * 2. Idempotenza. [materialize] riceve le occorrenze già presenti e non le riproduce,
- *    così può girare a ogni avvio dell'app senza duplicare nulla.
+ *    così può girare a ogni avvio dell'app senza duplicare nulla. Rispetta anche le date
+ *    che l'utente ha cancellato a mano, altrimenti ciò che si cancella oggi ricompare
+ *    domani.
  */
 object RecurrenceEngine {
 
@@ -74,7 +76,7 @@ object RecurrenceEngine {
     ): List<Transaction> {
         if (!rule.autoInsert) return emptyList()
         return occurrences(rule, rule.startDate, upTo)
-            .filter { it !in existingDates }
+            .filter { it !in existingDates && it !in rule.skippedDates }
             .map { date ->
                 Transaction(
                     id = idFactory(rule, date),

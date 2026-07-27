@@ -36,6 +36,13 @@ data class RecurringRule(
     val dayOfMonth: Int? = null,
     val active: Boolean = true,
     /**
+     * Date in cui la regola non deve generare nulla, perché l'utente ha cancellato quella
+     * specifica occorrenza. Senza questo elenco la generazione — che gira a ogni avvio ed
+     * è idempotente sulle date già presenti — ricreerebbe al riavvio successivo proprio il
+     * movimento appena cancellato.
+     */
+    val skippedDates: Set<LocalDate> = emptySet(),
+    /**
      * Se true il movimento viene creato automaticamente alla scadenza.
      * Se false l'app si limita a proporlo, e l'utente conferma l'importo —
      * utile per le bollette, dove la cifra cambia ogni volta.
