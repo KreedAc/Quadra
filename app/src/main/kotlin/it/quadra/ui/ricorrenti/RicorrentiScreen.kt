@@ -317,11 +317,14 @@ private fun FoglioRegola(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // `extra` è un getter @Composable e ChipRow chiama `colore` fuori dalla
+            // composizione: il colore va letto qui.
+            val marchio = extra.brandEnd
             ChipRow(
                 voci = CADENZE,
                 scelta = CADENZE.firstOrNull { it.every == cadenza.first && it.unit == cadenza.second },
                 etichetta = { it.etichetta },
-                colore = { extra.brandEnd },
+                colore = { marchio },
                 onScelta = { cadenza = it.every to it.unit },
             )
 

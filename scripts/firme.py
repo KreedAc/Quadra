@@ -96,9 +96,13 @@ def firme(sorgenti):
             for p in dividi(dentro):
                 nome = p.split(":")[0].strip()
                 tipo = p.split(":", 1)[1] if ":" in p else ""
+                dichiarazione = tipo.split("=")[0]
                 parametri.append({
                     "nome": nome,
-                    "lambda": "->" in tipo.split("=")[0],
+                    "lambda": "->" in dichiarazione,
+                    # Una lambda @Composable viene chiamata dentro la composizione e può
+                    # leggere il tema; una normale no, e leggerlo lì non compila.
+                    "componibile": "@Composable" in dichiarazione,
                     "default": "=" in tipo,
                 })
             trovate[m.group(1)] = {"parametri": parametri, "file": f.name}
@@ -139,6 +143,23 @@ def controlla(sorgenti, note):
                     )
                 elif len(posizionali) >= len(parametri):
                     problemi.append(f"{dove}: troppi argomenti prima della lambda finale")
+
+            # tema letto dentro una lambda che non è @Composable
+            for arg in dividi(dentro):
+                nominato = re.match(r"^(\w+)\s*=\s*\{(.*)\}\s*$", arg, re.S)
+                if not nominato:
+                    continue
+                parametro = next(
+                    (p for p in parametri if p["nome"] == nominato.group(1)), None
+                )
+                if not parametro or not parametro["lambda"] or parametro["componibile"]:
+                    continue
+                letto = re.search(r"\b(extra|MaterialTheme)\s*\.", nominato.group(2))
+                if letto:
+                    problemi.append(
+                        f"{dove}: '{parametro['nome']}' non è @Composable, ma la lambda "
+                        f"legge {letto.group(1)} — vanno letti fuori e catturati"
+                    )
 
             # un callback finito su un parametro che non lo è
             for i, arg in enumerate(posizionali):

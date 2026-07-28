@@ -513,11 +513,14 @@ private fun PassoEntrata(entrate: List<Category>, onConferma: (Money, String) ->
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+    // Il colore si legge qui e non dentro la lambda: `extra` è un getter @Composable,
+    // e ChipRow chiama `colore` fuori dal contesto di composizione.
+    val verde = extra.income
     ChipRow(
         voci = entrate,
         scelta = categoria,
         etichetta = { it.name },
-        colore = { extra.income },
+        colore = { verde },
         onScelta = { categoria = it },
     )
     ImportoGrande(digitato)
