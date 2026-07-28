@@ -90,6 +90,8 @@ data class RecurringRuleEntity(
     val skippedDates: String,
     /** Rinvii, come "occorrenza>quando" separati da virgola. Pochi e transitori. */
     val rimandi: String,
+    /** Data ISO di creazione: prima di questa non si chiede conto di niente. */
+    val creatoIl: String,
 )
 
 /**

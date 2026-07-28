@@ -57,6 +57,19 @@ data class RecurringRule(
      * fino a non somigliare più a niente.
      */
     val rimandi: Map<LocalDate, LocalDate> = emptyMap(),
+    /**
+     * Quando la regola è stata creata.
+     *
+     * Serve a non chiedere conferma per scadenze anteriori al promemoria stesso. Chi
+     * scrive oggi che l'assicurazione parte dal 2 luglio sta descrivendo un impegno,
+     * non confessando di aver saltato la rata di luglio: quelle occorrenze non sono mai
+     * passate da qui, e chiederne conto è rumore.
+     *
+     * Resta distinto da [startDate] perché gli arretrati veri servono ancora: una regola
+     * attiva da mesi, con l'app non aperta per tre settimane, deve chiedere tutto quello
+     * che è maturato nel frattempo.
+     */
+    val creatoIl: LocalDate = startDate,
 ) {
     init {
         require(every >= 1) { "L'intervallo di ricorrenza deve essere almeno 1, ricevuto $every" }

@@ -6,6 +6,7 @@ import it.quadra.core.model.RecurringRule
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ScadenzeTest {
@@ -22,6 +23,7 @@ class ScadenzeTest {
         saltate: Set<LocalDate> = emptySet(),
         rimandi: Map<LocalDate, LocalDate> = emptyMap(),
         attiva: Boolean = true,
+        creata: String? = null,
     ) = RecurringRule(
         id = id,
         description = descrizione,
@@ -35,6 +37,7 @@ class ScadenzeTest {
         active = attiva,
         skippedDates = saltate,
         rimandi = rimandi,
+        creatoIl = creata?.let(LocalDate::parse) ?: LocalDate.parse(inizio),
     )
 
     // ------------------------------------------------------- da confermare
@@ -144,6 +147,22 @@ class ScadenzeTest {
         )
     }
 
+    @Test
+    fun `una regola creata oggi non chiede conto delle scadenze prima di sé`() {
+        // Chi scrive oggi che l'assicurazione parte dal 2 luglio sta descrivendo un
+        // impegno, non confessando di aver saltato la rata di luglio.
+        val appena = regola(inizio = "2026-01-15", creata = oggi.toString())
+        assertTrue(Scadenze.daConfermare(listOf(appena), emptySet(), oggi).isEmpty())
+    }
+
+    @Test
+    fun `gli arretrati veri restano, perché l'app può non essere stata aperta`() {
+        // Regola creata a gennaio, app non aperta da allora: tutto quello che è maturato
+        // nel frattempo deve comparire.
+        val vecchia = regola(inizio = "2026-01-15", creata = "2026-01-15")
+        assertEquals(7, Scadenze.daConfermare(listOf(vecchia), emptySet(), oggi).size)
+    }
+
     // ------------------------------------------------------------- rinvii
 
     @Test
@@ -170,6 +189,37 @@ class ScadenzeTest {
         val attese = Scadenze.daConfermare(listOf(r), emptySet(), oggi)
         assertTrue(attese.none { it.occorrenza == LocalDate.parse("2026-07-15") })
         assertTrue(attese.any { it.occorrenza == LocalDate.parse("2026-06-15") })
+    }
+
+    @Test
+    fun `una rimandata resta visibile, con il giorno in cui tornerà`() {
+        // Rimandare non è cancellare: una scadenza che sparisce dalla schermata dopo un
+        // rinvio è indistinguibile da una persa, e non si può nemmeno cambiare idea.
+        val occorrenza = LocalDate.parse("2026-07-15")
+        val r = Scadenze.rimanda(regola(inizio = "2026-07-15"), occorrenza, 3, oggi)
+        assertTrue(Scadenze.daConfermare(listOf(r), emptySet(), oggi).isEmpty())
+
+        val rimandate = Scadenze.rimandate(listOf(r), emptySet(), oggi)
+        assertEquals(1, rimandate.size)
+        assertEquals(occorrenza, rimandate[0].occorrenza)
+        assertEquals(oggi.plusDays(3), rimandate[0].rimandataAl)
+        assertFalse(rimandate[0].inRitardo)
+    }
+
+    @Test
+    fun `arrivato il giorno, la rimandata torna fra quelle da confermare`() {
+        val r = Scadenze.rimanda(regola(inizio = "2026-07-15"), LocalDate.parse("2026-07-15"), 3, oggi)
+        val giorno = oggi.plusDays(3)
+        assertTrue(Scadenze.rimandate(listOf(r), emptySet(), giorno).isEmpty())
+        assertEquals(1, Scadenze.daConfermare(listOf(r), emptySet(), giorno).size)
+    }
+
+    @Test
+    fun `registrare una rimandata la toglie da entrambe le liste`() {
+        val r = Scadenze.rimanda(regola(inizio = "2026-07-15"), LocalDate.parse("2026-07-15"), 3, oggi)
+        val chiave = Scadenze.chiave(r.id, LocalDate.parse("2026-07-15"))
+        assertTrue(Scadenze.rimandate(listOf(r), setOf(chiave), oggi).isEmpty())
+        assertTrue(Scadenze.daConfermare(listOf(r), setOf(chiave), oggi).isEmpty())
     }
 
     @Test

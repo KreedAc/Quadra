@@ -141,6 +141,9 @@ fun RecurringRuleEntity.toDomain(): RecurringRule = RecurringRule(
             if (pezzi.size == 2) LocalDate.parse(pezzi[0]) to LocalDate.parse(pezzi[1]) else null
         }
         .toMap(),
+    // Le righe migrate da uno schema che non aveva la colonna ripiegano sulla partenza,
+    // che è il comportamento che avevano prima.
+    creatoIl = creatoIl.takeIf { it.isNotBlank() }?.let(LocalDate::parse) ?: LocalDate.parse(startDate),
 )
 
 fun RecurringRule.toEntity(): RecurringRuleEntity = RecurringRuleEntity(
@@ -157,6 +160,7 @@ fun RecurringRule.toEntity(): RecurringRuleEntity = RecurringRuleEntity(
     active = active,
     skippedDates = skippedDates.sorted().joinToString(",") { it.toString() },
     rimandi = rimandi.toSortedMap().entries.joinToString(",") { "${it.key}>${it.value}" },
+    creatoIl = creatoIl.toString(),
 )
 
 private inline fun <reified T : Enum<T>> enumOrDefault(name: String, fallback: T): T =

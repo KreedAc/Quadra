@@ -50,6 +50,8 @@ data class StatoMovimenti(
     val andamento: Andamento = Andamento.calcola(Money.ZERO, Money.ZERO),
     /** Scadenze ricorrenti che aspettano una conferma, dalla più vecchia. */
     val daConfermare: List<Scadenza> = emptyList(),
+    /** Scadenze rimandate: restano a vista, col giorno in cui torneranno. */
+    val rimandate: List<Scadenza> = emptyList(),
     /** Scadenze che devono ancora arrivare, per non farsi trovare impreparati. */
     val inArrivo: List<Scadenza> = emptyList(),
 ) {
@@ -164,6 +166,7 @@ class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel()
             giornoScelto = contorno.giorno,
             andamento = Andamento.calcola(speso, contorno.totali.available),
             daConfermare = Scadenze.daConfermare(attive, contorno.registrate),
+            rimandate = Scadenze.rimandate(attive, contorno.registrate),
             inArrivo = Scadenze.inArrivo(attive, contorno.registrate),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatoMovimenti())

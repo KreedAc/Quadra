@@ -103,7 +103,7 @@ fun MovimentiScreen(
         // Le scadenze restano in evidenza finché non ricevono una risposta: chiudere il
         // foglio non deve far sparire l'informazione, altrimenti basta un tocco distratto
         // per dimenticarsi una bolletta.
-        val scadenze = stato.daConfermare + stato.inArrivo
+        val scadenze = stato.daConfermare + stato.rimandate + stato.inArrivo
         if (scadenze.isNotEmpty()) {
             item {
                 Column(Modifier.padding(top = 18.dp)) {

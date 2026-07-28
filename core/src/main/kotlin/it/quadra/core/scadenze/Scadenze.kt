@@ -14,9 +14,12 @@ import java.time.temporal.ChronoUnit
 data class Scadenza(
     val regola: RecurringRule,
     val occorrenza: LocalDate,
-    /** Zero il giorno stesso, positivo dopo. Serve a dire "in ritardo di 3 giorni". */
+    /** Zero il giorno stesso, positivo dopo, negativo per quelle che devono arrivare. */
     val giorniDiRitardo: Int,
+    /** Quando è stata rimandata, se il giorno scelto non è ancora arrivato. */
+    val rimandataAl: LocalDate? = null,
 ) {
+    val inRitardo: Boolean get() = giorniDiRitardo >= 0 && rimandataAl == null
     val chiave: String get() = Scadenze.chiave(regola.id, occorrenza)
 }
 
@@ -44,8 +47,8 @@ object Scadenze {
     /**
      * Quanto indietro si guarda per gli arretrati.
      *
-     * Senza un limite, una regola mensile creata con data di partenza vecchia di tre anni
-     * proporrebbe trentasei conferme in fila al primo avvio. Un anno copre anche le
+     * Vale insieme alla data di creazione, che è il limite vero: questa resta come rete
+     * per una regola tenuta ferma a lungo e poi riattivata. Un anno copre anche le
      * scadenze annuali — bollo, assicurazione — che sono le più lente che esistano.
      */
     const val GIORNI_ARRETRATI = 365L
@@ -59,18 +62,46 @@ object Scadenze {
         regole: List<RecurringRule>,
         registrate: Set<String>,
         oggi: LocalDate = LocalDate.now(),
+    ): List<Scadenza> = passate(regole, registrate, oggi)
+        // Una scadenza rimandata torna il giorno che l'utente ha scelto, non prima.
+        .filter { it.rimandataAl == null }
+
+    /**
+     * Le scadenze passate che l'utente ha rimandato e che aspettano il loro giorno.
+     *
+     * Restano visibili. Rimandare non è cancellare, e una scadenza che sparisce dalla
+     * schermata dopo un rinvio è indistinguibile da una scadenza persa: l'utente non ha
+     * modo di sapere se tornerà, né di cambiare idea prima che torni.
+     */
+    fun rimandate(
+        regole: List<RecurringRule>,
+        registrate: Set<String>,
+        oggi: LocalDate = LocalDate.now(),
+    ): List<Scadenza> = passate(regole, registrate, oggi)
+        .filter { it.rimandataAl != null }
+
+    private fun passate(
+        regole: List<RecurringRule>,
+        registrate: Set<String>,
+        oggi: LocalDate,
     ): List<Scadenza> {
-        val da = oggi.minusDays(GIORNI_ARRETRATI)
+        val finestra = oggi.minusDays(GIORNI_ARRETRATI)
         return regole.flatMap { regola ->
-            RecurrenceEngine.occurrences(regola, maxOf(da, regola.startDate), oggi)
+            // Mai prima di quando la regola è nata: le occorrenze anteriori al
+            // promemoria non sono arretrati, sono descrizione di come funziona la spesa.
+            val da = maxOf(finestra, regola.startDate, regola.creatoIl)
+            RecurrenceEngine.occurrences(regola, da, oggi)
                 .filter { it !in regola.skippedDates }
                 .filter { chiave(regola.id, it) !in registrate }
-                // Una scadenza rimandata torna il giorno che l'utente ha scelto, non prima.
-                .filter { occorrenza ->
+                .map { occorrenza ->
                     val rinviata = regola.rimandi[occorrenza]
-                    rinviata == null || !rinviata.isAfter(oggi)
+                    Scadenza(
+                        regola = regola,
+                        occorrenza = occorrenza,
+                        giorniDiRitardo = ChronoUnit.DAYS.between(occorrenza, oggi).toInt(),
+                        rimandataAl = rinviata?.takeIf { it.isAfter(oggi) },
+                    )
                 }
-                .map { Scadenza(regola, it, ChronoUnit.DAYS.between(it, oggi).toInt()) }
         }.sortedWith(compareBy({ it.occorrenza }, { it.regola.description }))
     }
 

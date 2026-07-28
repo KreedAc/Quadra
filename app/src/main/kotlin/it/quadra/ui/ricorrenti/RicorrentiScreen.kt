@@ -437,6 +437,9 @@ private fun FoglioRegola(
                         // chiedere di far riapparire ciò che si è messo da parte.
                         skippedDates = iniziale?.skippedDates.orEmpty(),
                         rimandi = iniziale?.rimandi.orEmpty(),
+                        // Una regola nuova nasce oggi anche se descrive una scadenza
+                        // che parte da ieri: non deve chiedere conto del passato.
+                        creatoIl = iniziale?.creatoIl ?: LocalDate.now(),
                     )
                 )
             }

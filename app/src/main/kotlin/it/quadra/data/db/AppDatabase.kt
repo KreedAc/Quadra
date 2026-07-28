@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         RecurringRuleEntity::class,
         ImpostazioneEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -87,6 +87,24 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Le regole ricordano quando sono nate.
+         *
+         * Serve a non chiedere conferma per scadenze anteriori al promemoria stesso.
+         * Alle regole già esistenti si assegna il giorno della migrazione: quelle
+         * scadenze o sono già state confermate, o sono state saltate, o riguardano un
+         * periodo in cui l'app non teneva ancora il conto — in nessuno dei tre casi ha
+         * senso ripescarle adesso.
+         */
+        private val DA_3_A_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `recurring_rules` ADD COLUMN `creatoIl` TEXT NOT NULL DEFAULT ''"
+                )
+                db.execSQL("UPDATE `recurring_rules` SET `creatoIl` = date('now')")
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -97,7 +115,7 @@ abstract class AppDatabase : RoomDatabase() {
                     // Nessun fallbackToDestructiveMigration: qui dentro ci sono anni di
                     // spese di qualcuno. Se un giorno lo schema cambia si scrive una
                     // migrazione, non si cancella tutto.
-                    .addMigrations(DA_1_A_2, DA_2_A_3)
+                    .addMigrations(DA_1_A_2, DA_2_A_3, DA_3_A_4)
                     .build()
                     .also { instance = it }
             }

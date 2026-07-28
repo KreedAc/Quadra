@@ -119,7 +119,8 @@ fun ScadenzaSheet(
                     Text(
                         scadenzaDetta(scadenza) + (conto?.let { " · ${it.name}" } ?: ""),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (scadenza.giorniDiRitardo > 0) MaterialTheme.colorScheme.error
+                        color = if (scadenza.inRitardo && scadenza.giorniDiRitardo > 0)
+                            MaterialTheme.colorScheme.error
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -128,8 +129,8 @@ fun ScadenzaSheet(
             }
 
             Text(
-                if (scadenza.giorniDiRitardo < 0) "Quanto hai pagato, se l'hai già fatto"
-                else "Quanto hai pagato davvero",
+                if (scadenza.inRitardo) "Quanto hai pagato davvero"
+                else "Quanto hai pagato, se l'hai già fatto",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -172,6 +173,9 @@ fun ScadenzaSheet(
                 if (quanteAncora > 0) {
                     "Dopo questa ne restano altre $quanteAncora. " +
                         "Finché non rispondi resta in evidenza sulla schermata dei movimenti."
+                } else if (scadenza.rimandataAl != null) {
+                    "L'hai rimandata: resta qui e te la richiedo il giorno che hai scelto. " +
+                        "Puoi comunque registrarla adesso o rimandarla ancora."
                 } else if (scadenza.giorniDiRitardo < 0) {
                     "Non è ancora scaduta: registrala solo se l'hai già pagata."
                 } else {
@@ -187,6 +191,9 @@ fun ScadenzaSheet(
 }
 
 private fun scadenzaDetta(scadenza: Scadenza): String = when {
+    // Il rinvio viene prima di tutto: è la risposta che l'utente ha già dato, e sapere
+    // quando tornerà conta più di sapere da quanto è scaduta.
+    scadenza.rimandataAl != null -> "Te lo richiedo il ${scadenza.rimandataAl.format(formatoScadenza)}"
     scadenza.giorniDiRitardo == 0 -> "Scade oggi"
     scadenza.giorniDiRitardo == 1 -> "Scaduta ieri"
     scadenza.giorniDiRitardo > 1 -> "Scaduta il ${scadenza.occorrenza.format(formatoScadenza)}"
@@ -212,7 +219,7 @@ fun CardScadenza(
     categoria: Category?,
     onClick: () -> Unit,
 ) {
-    val inRitardo = scadenza.giorniDiRitardo >= 0
+    val inRitardo = scadenza.inRitardo
     val colore = categoria?.let { Color(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
     val accento = if (inRitardo) MaterialTheme.colorScheme.error else colore
     Column(

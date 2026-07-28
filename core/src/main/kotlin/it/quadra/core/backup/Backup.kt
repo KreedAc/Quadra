@@ -123,6 +123,8 @@ data class RicorrenteJson(
      * da sole. Un backup vecchio porta ancora quel campo e viene semplicemente ignorato.
      */
     val rinvii: List<String> = emptyList(),
+    /** Data di creazione; assente nei backup più vecchi, dove ripiega sulla partenza. */
+    val creata: String? = null,
 )
 
 /** Cosa può andare storto leggendo un file scelto dall'utente. */
@@ -209,6 +211,7 @@ object Backup {
         fine = endDate?.toString(), giornoDelMese = dayOfMonth, attiva = active,
         dateSaltate = skippedDates.sorted().map { it.toString() },
         rinvii = rimandi.toSortedMap().map { (occorrenza, quando) -> "$occorrenza>$quando" },
+        creata = creatoIl.toString(),
     )
 
     // ───────────────────────────────────────────────── verso il dominio
@@ -245,6 +248,7 @@ object Backup {
             val pezzi = riga.split('>')
             if (pezzi.size == 2) LocalDate.parse(pezzi[0]) to LocalDate.parse(pezzi[1]) else null
         }.toMap(),
+        creatoIl = creata?.let(LocalDate::parse) ?: LocalDate.parse(inizio),
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(nome: String, riserva: T): T =
