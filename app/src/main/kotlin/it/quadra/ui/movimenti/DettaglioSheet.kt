@@ -14,13 +14,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,6 +45,8 @@ import it.quadra.ui.Icone
 import it.quadra.ui.common.Azione
 import it.quadra.ui.common.CampoTesto
 import it.quadra.ui.common.ChipRow
+import it.quadra.ui.common.ContenutoFoglio
+import it.quadra.ui.common.GrigliaFissa
 import it.quadra.ui.common.ImportoGrande
 import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
@@ -112,10 +110,7 @@ fun DettaglioSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        Column(
-            Modifier.padding(horizontal = 18.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+        ContenutoFoglio(spazio = 12.dp) {
             Intestazione(
                 movimento = movimento,
                 categoria = categoria,
@@ -131,7 +126,7 @@ fun DettaglioSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Azione("Elimina", MaterialTheme.colorScheme.error, onClick = onElimina)
-                return@Column
+                return@ContenutoFoglio
             }
 
             Voce("Importo", digitato.importo.abs().format(), apertura == Apertura.IMPORTO) {
@@ -147,16 +142,9 @@ fun DettaglioSheet(
                 apertura = if (apertura == Apertura.CATEGORIA) Apertura.NESSUNA else Apertura.CATEGORIA
             }
             Pannello(apertura == Apertura.CATEGORIA) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    modifier = Modifier.heightIn(max = 260.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    gridItems(principali, key = { it.id }) { voce ->
-                        val madre = categoria?.parentId ?: categoria?.id
-                        Casella(voce, voce.id == madre) { categoria = voce }
-                    }
+                val madre = categoria?.parentId ?: categoria?.id
+                GrigliaFissa(voci = principali, colonne = 4, spazio = 10.dp) { voce ->
+                    Casella(voce, voce.id == madre) { categoria = voce }
                 }
                 if (sottocategorie.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))

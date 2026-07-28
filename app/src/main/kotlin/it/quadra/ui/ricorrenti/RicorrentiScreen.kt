@@ -9,13 +9,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,6 +48,8 @@ import it.quadra.ui.Icone
 import it.quadra.ui.common.Azione
 import it.quadra.ui.common.CampoTesto
 import it.quadra.ui.common.ChipRow
+import it.quadra.ui.common.ContenutoFoglio
+import it.quadra.ui.common.GrigliaFissa
 import it.quadra.ui.common.ImportoGrande
 import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
@@ -299,10 +297,7 @@ private fun FoglioRegola(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        Column(
-            Modifier.padding(horizontal = 18.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
+        ContenutoFoglio {
             Text(
                 if (iniziale == null) "Nuova ricorrente" else "Modifica ricorrente",
                 style = MaterialTheme.typography.titleMedium,
@@ -411,29 +406,24 @@ private fun FoglioRegola(
 /** I giorni del mese, per scegliere quando cade. */
 @Composable
 private fun GrigliaGiorni(scelto: Int, onScegli: (Int) -> Unit) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(7),
-        modifier = Modifier.heightIn(max = 200.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        gridItems((1..31).toList(), key = { it }) { numero ->
-            val attivo = numero == scelto
-            Text(
-                numero.toString(),
-                style = MaterialTheme.typography.bodyMedium.tabular,
-                textAlign = TextAlign.Center,
-                color = if (attivo) extra.brandEnd else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(11.dp))
-                    .background(
-                        if (attivo) extra.brandEnd.copy(alpha = 0.20f)
-                        else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                    .clickable { onScegli(numero) }
-                    .padding(vertical = 9.dp),
-            )
-        }
+    val acceso = extra.brandEnd
+    GrigliaFissa(voci = (1..31).toList(), colonne = 7) { numero ->
+        val attivo = numero == scelto
+        Text(
+            numero.toString(),
+            style = MaterialTheme.typography.bodyMedium.tabular,
+            textAlign = TextAlign.Center,
+            color = if (attivo) acceso else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(11.dp))
+                .background(
+                    if (attivo) acceso.copy(alpha = 0.20f)
+                    else MaterialTheme.colorScheme.surfaceVariant
+                )
+                .clickable { onScegli(numero) }
+                .padding(vertical = 9.dp),
+        )
     }
 }
 

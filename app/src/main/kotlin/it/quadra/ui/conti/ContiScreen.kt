@@ -51,6 +51,7 @@ import it.quadra.ui.Icone
 import it.quadra.ui.common.Azione
 import it.quadra.ui.common.CampoTesto
 import it.quadra.ui.common.ChipRow
+import it.quadra.ui.common.ContenutoFoglio
 import it.quadra.ui.common.ImportoGrande
 import it.quadra.ui.common.SceltaColore
 import it.quadra.ui.common.SceltaIcona
@@ -364,10 +365,7 @@ private fun FoglioConto(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        Column(
-            Modifier.padding(horizontal = 18.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        ContenutoFoglio(spazio = 16.dp) {
             Intestazione(conto, saldo)
 
             when (passo) {
@@ -688,10 +686,7 @@ private fun FoglioNuovoConto(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        Column(
-            Modifier.padding(horizontal = 18.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        ContenutoFoglio(spazio = 16.dp) {
             Text("Nuovo conto", style = MaterialTheme.typography.titleMedium)
             CampoTesto(nome, "Nome del conto") { nome = it }
             SceltaColore(colore) { colore = it }

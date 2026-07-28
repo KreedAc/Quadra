@@ -42,6 +42,7 @@ import it.quadra.ui.ICONE_SCEGLIBILI
 import it.quadra.ui.Icone
 import it.quadra.ui.common.Azione
 import it.quadra.ui.common.CampoTesto
+import it.quadra.ui.common.ContenutoFoglio
 import it.quadra.ui.common.SceltaColore
 import it.quadra.ui.common.SceltaIcona
 import it.quadra.ui.common.TAVOLOZZA
@@ -303,10 +304,7 @@ private fun FoglioModifica(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        Column(
-            Modifier.padding(horizontal = 18.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        ContenutoFoglio(spazio = 16.dp) {
             CampoTesto(nome, "Nome") { nome = it }
 
             // Colore e icona solo al primo livello: le sottocategorie li ereditano dalla
@@ -341,10 +339,7 @@ private fun FoglioNome(titolo: String, onChiudi: () -> Unit, onConferma: (String
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        Column(
-            Modifier.padding(horizontal = 18.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        ContenutoFoglio(spazio = 16.dp) {
             Text(titolo, style = MaterialTheme.typography.titleMedium)
             CampoTesto(nome, "Nome") { nome = it }
             Azione("Aggiungi", extra.brandEnd) { if (nome.isNotBlank()) onConferma(nome.trim()) }
@@ -367,10 +362,7 @@ private fun FoglioNuovaCategoria(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        Column(
-            Modifier.padding(horizontal = 18.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        ContenutoFoglio(spazio = 16.dp) {
             Text("Nuova categoria", style = MaterialTheme.typography.titleMedium)
             CampoTesto(nome, "Nome") { nome = it }
             SceltaColore(colore) { colore = it }

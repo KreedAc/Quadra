@@ -5,11 +5,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import it.quadra.core.input.Digitazione
 import it.quadra.core.model.Money
@@ -41,6 +46,66 @@ import it.quadra.ui.theme.tabular
  * tastierino che in una schermata accumula centesimi e in un'altra no è il tipo di
  * incoerenza che si nota subito col pollice e non si riesce mai a spiegare.
  */
+
+/**
+ * Il contenuto di un foglio che sale dal basso.
+ *
+ * Scorre. Sembra ovvio e non lo è stato: un foglio con dentro un tastierino, una griglia
+ * di giorni e tre file di scelte supera l'altezza dello schermo su qualunque telefono, e
+ * senza scorrimento il pulsante di salvataggio resta sotto il bordo — irraggiungibile,
+ * perché trascinare verso l'alto chiude il foglio invece di scoprirlo.
+ *
+ * Dentro non ci devono essere componenti che scorrono in verticale a loro volta: si
+ * contenderebbero lo stesso gesto. Per le griglie c'è [GrigliaFissa], che non scorre.
+ */
+@Composable
+fun ContenutoFoglio(
+    modifier: Modifier = Modifier,
+    spazio: Dp = 14.dp,
+    contenuto: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 18.dp)
+            .padding(bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(spazio),
+        content = contenuto,
+    )
+}
+
+/**
+ * Una griglia che non scorre, disposta a mano riga per riga.
+ *
+ * Serve dentro i fogli: una griglia pigra è anche un componente che scorre, e dentro un
+ * foglio che scorre a sua volta le due cose si rubano il gesto. Con poche decine di
+ * elementi — le categorie, i giorni del mese — la pigrizia non serviva comunque.
+ */
+@Composable
+fun <T> GrigliaFissa(
+    voci: List<T>,
+    colonne: Int,
+    modifier: Modifier = Modifier,
+    spazio: Dp = 6.dp,
+    contenuto: @Composable (T) -> Unit,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(spazio)) {
+        voci.chunked(colonne).forEach { riga ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spazio),
+            ) {
+                riga.forEach { voce ->
+                    Box(Modifier.weight(1f)) { contenuto(voce) }
+                }
+                // L'ultima riga incompleta non deve allargare le celle che ha:
+                // il posto vuoto resta vuoto e le colonne restano allineate.
+                repeat(colonne - riga.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
 
 /** Le tinte fra cui scegliere, le stesse verificate per il tema scuro e per quello chiaro. */
 val TAVOLOZZA: List<Int> = listOf(
