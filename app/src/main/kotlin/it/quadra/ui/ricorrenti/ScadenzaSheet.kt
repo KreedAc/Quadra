@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -127,7 +128,8 @@ fun ScadenzaSheet(
             }
 
             Text(
-                "Quanto hai pagato davvero",
+                if (scadenza.giorniDiRitardo < 0) "Quanto hai pagato, se l'hai già fatto"
+                else "Quanto hai pagato davvero",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -170,6 +172,8 @@ fun ScadenzaSheet(
                 if (quanteAncora > 0) {
                     "Dopo questa ne restano altre $quanteAncora. " +
                         "Finché non rispondi resta in evidenza sulla schermata dei movimenti."
+                } else if (scadenza.giorniDiRitardo < 0) {
+                    "Non è ancora scaduta: registrala solo se l'hai già pagata."
                 } else {
                     "Niente viene registrato finché non lo confermi: l'app non può sapere " +
                         "se il pagamento è andato a buon fine."
@@ -182,53 +186,59 @@ fun ScadenzaSheet(
     }
 }
 
-private fun scadenzaDetta(scadenza: Scadenza): String = when (scadenza.giorniDiRitardo) {
-    0 -> "Scade oggi"
-    1 -> "Scaduta ieri"
-    else -> "Scaduta il ${scadenza.occorrenza.format(formatoScadenza)}"
+private fun scadenzaDetta(scadenza: Scadenza): String = when {
+    scadenza.giorniDiRitardo == 0 -> "Scade oggi"
+    scadenza.giorniDiRitardo == 1 -> "Scaduta ieri"
+    scadenza.giorniDiRitardo > 1 -> "Scaduta il ${scadenza.occorrenza.format(formatoScadenza)}"
+    scadenza.giorniDiRitardo == -1 -> "Domani"
+    else -> "In arrivo il ${scadenza.occorrenza.format(formatoScadenza)}"
 }
 
 /**
- * La striscia in evidenza sui movimenti: cosa aspetta una risposta e cosa sta per uscire.
+ * Una scadenza come scheda, per la fila orizzontale sopra i movimenti.
  *
- * È la parte utile che restava all'inserimento automatico — sapere che fra quattro giorni
- * escono 145 € è quello che permette di non spenderli — senza la parte dannosa, cioè
- * scalarli prima che escano davvero.
+ * In fila e non impilate: chi ha otto fra abbonamenti, bollette e rate si ritroverebbe
+ * la schermata dei movimenti spinta sotto il bordo da cose che non sono ancora
+ * successe. In orizzontale ne restano due e mezza a vista, che è abbastanza per sapere
+ * cosa bolle senza perdere di vista quello che si è speso davvero.
+ *
+ * È toccabile anche quando deve ancora arrivare: vedersela lì e non poterla registrare
+ * è la stessa frustrazione di un pulsante che non risponde — e capita davvero di pagare
+ * un abbonamento qualche giorno prima.
  */
 @Composable
-fun RigaScadenza(
+fun CardScadenza(
     scadenza: Scadenza,
     categoria: Category?,
-    inRitardo: Boolean,
     onClick: () -> Unit,
 ) {
+    val inRitardo = scadenza.giorniDiRitardo >= 0
     val colore = categoria?.let { Color(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
     val accento = if (inRitardo) MaterialTheme.colorScheme.error else colore
-    Row(
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(17.dp))
-            .background(accento.copy(alpha = if (inRitardo) 0.14f else 0.10f))
+            .width(186.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(accento.copy(alpha = if (inRitardo) 0.16f else 0.10f))
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(34.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(accento.copy(alpha = 0.22f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                iconFor(categoria?.icon),
-                contentDescription = null,
-                tint = accento,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-        Column(Modifier.weight(1f)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(accento.copy(alpha = 0.24f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    iconFor(categoria?.icon),
+                    contentDescription = null,
+                    tint = accento,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
             Text(
                 scadenza.regola.description.ifBlank { categoria?.name.orEmpty() },
                 style = MaterialTheme.typography.bodyLarge,
@@ -236,14 +246,15 @@ fun RigaScadenza(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                if (inRitardo) scadenzaDetta(scadenza)
-                else "In arrivo il ${scadenza.occorrenza.format(formatoScadenza)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = if (inRitardo) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
+        Text(
+            scadenzaDetta(scadenza),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (inRitardo) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         Text(
             scadenza.regola.amount.abs().format(),
             style = MaterialTheme.typography.titleMedium.tabular,

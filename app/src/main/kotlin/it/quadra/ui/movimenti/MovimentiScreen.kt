@@ -51,8 +51,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.quadra.core.model.Category
 import it.quadra.core.model.Transaction
+import it.quadra.core.scadenze.Scadenza
 import it.quadra.ui.iconFor
-import it.quadra.ui.ricorrenti.RigaScadenza
+import it.quadra.ui.ricorrenti.CardScadenza
 import it.quadra.ui.ricorrenti.ScadenzaSheet
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
@@ -87,9 +88,12 @@ fun MovimentiScreen(
 
     val giornate = stato.giornateVisibili
     var aperto by remember { mutableStateOf<Transaction?>(null) }
-    // La scadenza in cima alla coda, se non è stata messa da parte per questa sessione.
+    // Due modi di arrivare al foglio di una scadenza: la coda di quelle scadute, che si
+    // apre da sola, e il tocco su una scheda, che vale anche per le future.
     var scadenzeRinviate by remember { mutableStateOf(emptySet<String>()) }
-    val scadenzaAperta = stato.daConfermare.firstOrNull { it.chiave !in scadenzeRinviate }
+    var scadenzaScelta by remember { mutableStateOf<Scadenza?>(null) }
+    val inCoda = stato.daConfermare.firstOrNull { it.chiave !in scadenzeRinviate }
+    val scadenzaAperta = scadenzaScelta ?: inCoda
 
     LazyColumn(modifier = modifier.padding(horizontal = 18.dp)) {
         item { SelettoreMese(stato, viewModel) }
@@ -99,27 +103,26 @@ fun MovimentiScreen(
         // Le scadenze restano in evidenza finché non ricevono una risposta: chiudere il
         // foglio non deve far sparire l'informazione, altrimenti basta un tocco distratto
         // per dimenticarsi una bolletta.
-        if (stato.daConfermare.isNotEmpty() || stato.inArrivo.isNotEmpty()) {
+        val scadenze = stato.daConfermare + stato.inArrivo
+        if (scadenze.isNotEmpty()) {
             item {
-                Column(
-                    Modifier.padding(top = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    stato.daConfermare.forEach { scadenza ->
-                        RigaScadenza(
-                            scadenza = scadenza,
-                            categoria = stato.categoria(scadenza.regola.categoryId),
-                            inRitardo = true,
-                            onClick = { scadenzeRinviate = scadenzeRinviate - scadenza.chiave },
-                        )
-                    }
-                    stato.inArrivo.forEach { scadenza ->
-                        RigaScadenza(
-                            scadenza = scadenza,
-                            categoria = stato.categoria(scadenza.regola.categoryId),
-                            inRitardo = false,
-                            onClick = {},
-                        )
+                Column(Modifier.padding(top = 18.dp)) {
+                    Text(
+                        if (stato.daConfermare.isEmpty()) "In arrivo"
+                        else "Da confermare · ${stato.daConfermare.size}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (stato.daConfermare.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.error,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(scadenze, key = { it.chiave }) { scadenza ->
+                            CardScadenza(
+                                scadenza = scadenza,
+                                categoria = stato.categoria(scadenza.regola.categoryId),
+                                onClick = { scadenzaScelta = scadenza },
+                            )
+                        }
                     }
                 }
             }
@@ -156,13 +159,19 @@ fun MovimentiScreen(
             scadenza = scadenza,
             categoria = stato.categoria(scadenza.regola.categoryId),
             conto = stato.conto(scadenza.regola.accountId),
-            quanteAncora = stato.daConfermare.size - 1,
-            onConferma = { viewModel.confermaScadenza(scadenza, it) },
-            onRimanda = { viewModel.rimandaScadenza(scadenza, it) },
-            onSalta = { viewModel.saltaScadenza(scadenza) },
-            // Chiudere senza rispondere la mette da parte solo per questa apertura
-            // dell'app: la riga resta sopra la lista, e riaprendo ritorna.
-            onChiudi = { scadenzeRinviate = scadenzeRinviate + scadenza.chiave },
+            quanteAncora = stato.daConfermare.count {
+                it.chiave !in scadenzeRinviate && it.chiave != scadenza.chiave
+            },
+            onConferma = { viewModel.confermaScadenza(scadenza, it); scadenzaScelta = null },
+            onRimanda = { viewModel.rimandaScadenza(scadenza, it); scadenzaScelta = null },
+            onSalta = { viewModel.saltaScadenza(scadenza); scadenzaScelta = null },
+            onChiudi = {
+                // Chiudere una scadenza aperta a mano la richiude e basta. Chiudere
+                // quella che si è aperta da sola la mette da parte per questa apertura
+                // dell'app: la scheda resta sopra la lista, e riaprendo ritorna.
+                if (scadenzaScelta != null) scadenzaScelta = null
+                else scadenzeRinviate = scadenzeRinviate + scadenza.chiave
+            },
         )
     }
 
