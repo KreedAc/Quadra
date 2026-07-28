@@ -3,16 +3,12 @@ package it.quadra.core.ledger
 import it.quadra.core.model.Account
 import it.quadra.core.model.AccountKind
 import it.quadra.core.model.Money
-import it.quadra.core.model.RecurrenceUnit
-import it.quadra.core.model.RecurringRule
 import it.quadra.core.model.Transaction
 import it.quadra.core.model.TransactionSource
-import it.quadra.core.recurrence.RecurrenceEngine
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class EditsTest {
@@ -144,41 +140,6 @@ class EditsTest {
         val movimenti = listOf(uscita, entrata)
         assertEquals(Edits.delete(uscita, movimenti), Edits.delete(entrata, movimenti))
         assertTrue(Edits.delete(entrata, movimenti).isEmpty())
-    }
-
-    @Test
-    fun `una ricorrente cancellata non rinasce al riavvio`() {
-        val regola = RecurringRule(
-            id = "r1", description = "Netflix", amount = Money.of(-12, 99),
-            categoryId = "svago.abbonamenti_digitali", accountId = "carta_x",
-            every = 1, unit = RecurrenceUnit.MONTH, startDate = LocalDate.parse("2026-05-10"),
-        )
-        val idFactory = { r: RecurringRule, d: LocalDate -> "${r.id}@$d" }
-        val generati = RecurrenceEngine.materialize(regola, oggi, idFactory = idFactory)
-        assertEquals(3, generati.size)
-
-        val daCancellare = generati.first { it.date == LocalDate.parse("2026-06-10") }
-        val rimasti = Edits.delete(daCancellare, generati)
-
-        // Senza avvisare la regola, il giro successivo lo ricrea.
-        val ingenuo = RecurrenceEngine.materialize(
-            regola, oggi, existingDates = rimasti.map { it.date }.toSet(), idFactory = idFactory,
-        )
-        assertEquals(listOf(LocalDate.parse("2026-06-10")), ingenuo.map { it.date })
-
-        // Segnando la data come saltata, resta cancellato.
-        val (ruleId, data) = Edits.skipForRule(daCancellare)!!
-        assertEquals("r1", ruleId)
-        val aggiornata = regola.copy(skippedDates = regola.skippedDates + data)
-        val corretto = RecurrenceEngine.materialize(
-            aggiornata, oggi, existingDates = rimasti.map { it.date }.toSet(), idFactory = idFactory,
-        )
-        assertTrue(corretto.isEmpty())
-    }
-
-    @Test
-    fun `un movimento manuale non ha nessuna regola da avvisare`() {
-        assertNull(Edits.skipForRule(spesa("a", -1000, "carta_x")))
     }
 
     // ------------------------------------------------------------- correggere

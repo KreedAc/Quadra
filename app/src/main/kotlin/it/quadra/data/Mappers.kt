@@ -134,7 +134,13 @@ fun RecurringRuleEntity.toDomain(): RecurringRule = RecurringRule(
         .filter { it.isNotBlank() }
         .map(LocalDate::parse)
         .toSet(),
-    autoInsert = autoInsert,
+    rimandi = rimandi.split(',')
+        .filter { it.isNotBlank() }
+        .mapNotNull { riga ->
+            val pezzi = riga.split('>')
+            if (pezzi.size == 2) LocalDate.parse(pezzi[0]) to LocalDate.parse(pezzi[1]) else null
+        }
+        .toMap(),
 )
 
 fun RecurringRule.toEntity(): RecurringRuleEntity = RecurringRuleEntity(
@@ -150,7 +156,7 @@ fun RecurringRule.toEntity(): RecurringRuleEntity = RecurringRuleEntity(
     dayOfMonth = dayOfMonth,
     active = active,
     skippedDates = skippedDates.sorted().joinToString(",") { it.toString() },
-    autoInsert = autoInsert,
+    rimandi = rimandi.toSortedMap().entries.joinToString(",") { "${it.key}>${it.value}" },
 )
 
 private inline fun <reified T : Enum<T>> enumOrDefault(name: String, fallback: T): T =

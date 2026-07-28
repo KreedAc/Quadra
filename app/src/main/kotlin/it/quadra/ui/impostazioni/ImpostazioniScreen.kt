@@ -106,7 +106,7 @@ fun ImpostazioniScreen(
                 VoceImpostazione(
                     icona = Icone.Scambio,
                     titolo = "Spese ricorrenti",
-                    sottotitolo = "Affitto, bollette, abbonamenti: l'app le mette da sola",
+                    sottotitolo = "Affitto, bollette, abbonamenti: te le ricorda alla scadenza",
                     onClick = onApriRicorrenti,
                 )
             }

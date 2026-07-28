@@ -97,6 +97,10 @@ interface TransactionDao {
     @Query("DELETE FROM transactions")
     suspend fun deleteAll()
 
+    /** Le chiavi delle scadenze ricorrenti già confermate. */
+    @Query("SELECT externalKey FROM transactions WHERE externalKey LIKE 'ric:%'")
+    fun observeChiaviRicorrenti(): Flow<List<String>>
+
     /**
      * Cancella insieme tutte le gambe di un trasferimento.
      *

@@ -2,7 +2,6 @@ package it.quadra.core.ledger
 
 import it.quadra.core.model.Money
 import it.quadra.core.model.Transaction
-import it.quadra.core.model.TransactionSource
 import java.time.Instant
 import java.time.LocalDate
 
@@ -51,22 +50,6 @@ object Edits {
         val toRemove = deletionSet(transaction, all)
         return all.filterNot { it.id in toRemove }
     }
-
-    /**
-     * Se il movimento cancellato era stato generato da una regola ricorrente, la data va
-     * segnata come saltata.
-     *
-     * Seconda trappola: senza questo, la generazione delle ricorrenti — che gira a ogni
-     * avvio ed è idempotente sulle date già presenti — ricreerebbe al riavvio successivo
-     * esattamente il movimento appena cancellato. L'utente lo cancella, riapre l'app, e
-     * se lo ritrova. Restituisce null quando non c'è nessuna regola da avvisare.
-     */
-    fun skipForRule(transaction: Transaction): Pair<String, LocalDate>? =
-        if (transaction.source == TransactionSource.RECURRING && transaction.recurringRuleId != null) {
-            transaction.recurringRuleId to transaction.date
-        } else {
-            null
-        }
 
     /**
      * Sposta un movimento su un altro conto — il caso "l'avevo messo sulla carta X ma era

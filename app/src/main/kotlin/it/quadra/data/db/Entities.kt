@@ -88,7 +88,8 @@ data class RecurringRuleEntity(
     val active: Boolean,
     /** Date ISO separate da virgola. Poche per definizione, non serve una tabella. */
     val skippedDates: String,
-    val autoInsert: Boolean,
+    /** Rinvii, come "occorrenza>quando" separati da virgola. Pochi e transitori. */
+    val rimandi: String,
 )
 
 /**

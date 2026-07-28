@@ -15,7 +15,8 @@ import it.quadra.core.model.Money
 import it.quadra.core.model.RecurringRule
 import it.quadra.core.model.Transaction
 import it.quadra.core.model.TransactionSource
-import it.quadra.core.recurrence.RecurrenceEngine
+import it.quadra.core.scadenze.Scadenza
+import it.quadra.core.scadenze.Scadenze
 import it.quadra.data.db.AppDatabase
 import it.quadra.data.db.ImpostazioneEntity
 import kotlinx.coroutines.flow.Flow
@@ -98,36 +99,21 @@ class LedgerRepository(private val db: AppDatabase) {
     /**
      * Cancella davvero, senza lasciare traccia.
      *
-     * Due cose che non si vedono ma servono: le gambe di un trasferimento se ne vanno
-     * insieme, e se il movimento veniva da una regola ricorrente la data viene segnata
-     * come saltata — altrimenti la generazione al prossimo avvio lo farebbe rinascere.
+     * Le gambe di un trasferimento se ne vanno insieme, che è l'unico caso in cui
+     * cancellare una riga sola romperebbe i conti.
+     *
+     * Se il movimento era nato da una scadenza ricorrente, cancellarlo la rimette in
+     * attesa — ed è quello che si vuole: si cancella proprio perché quel pagamento non è
+     * avvenuto. Non serve segnare niente da nessuna parte, perché lo stato di una
+     * scadenza è sempre ricalcolato dai movimenti che esistono.
      */
     suspend fun delete(transaction: Transaction) {
         db.transactions().deleteWithLegs(transaction.toEntity())
-
-        Edits.skipForRule(transaction)?.let { (ruleId, date) ->
-            db.recurringRules().byId(ruleId)?.let { entity ->
-                val rule = entity.toDomain()
-                db.recurringRules().upsert(
-                    rule.copy(skippedDates = rule.skippedDates + date).toEntity()
-                )
-            }
-        }
     }
 
     /** Rimette un movimento cancellato, per la finestra di annullamento. */
     suspend fun restore(transactions: List<Transaction>) {
         db.transactions().upsert(transactions.map { it.toEntity() })
-        transactions.forEach { transaction ->
-            Edits.skipForRule(transaction)?.let { (ruleId, date) ->
-                db.recurringRules().byId(ruleId)?.let { entity ->
-                    val rule = entity.toDomain()
-                    db.recurringRules().upsert(
-                        rule.copy(skippedDates = rule.skippedDates - date).toEntity()
-                    )
-                }
-            }
-        }
     }
 
     /** Le gambe che verrebbero cancellate insieme a questo movimento. */
@@ -317,32 +303,6 @@ class LedgerRepository(private val db: AppDatabase) {
         }
     }
 
-    /**
-     * Crea i movimenti delle regole ricorrenti scadute.
-     * Gira a ogni avvio ed è idempotente: le date già presenti e quelle cancellate a
-     * mano non vengono riprodotte.
-     */
-    suspend fun materializeRecurring(upTo: LocalDate = LocalDate.now()) {
-        val now = Instant.now()
-        db.recurringRules().activeRules().forEach { entity ->
-            val rule = entity.toDomain()
-            val existing = db.transactions().datesGeneratedBy(rule.id)
-                .map(LocalDate::parse)
-                .toSet()
-            val nuovi = RecurrenceEngine.materialize(
-                rule = rule,
-                upTo = upTo,
-                existingDates = existing,
-                idFactory = { _, _ -> UUID.randomUUID().toString() },
-            )
-            if (nuovi.isNotEmpty()) {
-                db.transactions().upsert(
-                    nuovi.map { it.copy(createdAt = now, updatedAt = now).toEntity() }
-                )
-            }
-        }
-    }
-
     // ───────────────────────────────────────────── ricorrenti
 
     fun observeRecurring(): Flow<List<RecurringRule>> =
@@ -350,6 +310,52 @@ class LedgerRepository(private val db: AppDatabase) {
 
     suspend fun salvaRicorrente(regola: RecurringRule) {
         db.recurringRules().upsert(regola.toEntity())
+    }
+
+    /** Le scadenze già confermate, per capire cosa resta in attesa. */
+    fun observeScadenzeRegistrate(): Flow<Set<String>> =
+        db.transactions().observeChiaviRicorrenti().map { it.toSet() }
+
+    /**
+     * Registra il pagamento di una scadenza, con l'importo che l'utente ha davvero pagato.
+     *
+     * La data del movimento è quella in cui si è pagato, che può non essere quella della
+     * scadenza: la rata del 10 saldata il 12 è una spesa del 12. Ma resta legata alla
+     * scadenza del 10 tramite la chiave, altrimenti l'app tornerebbe a chiederla.
+     */
+    suspend fun confermaScadenza(
+        scadenza: Scadenza,
+        importo: Money,
+        data: LocalDate = LocalDate.now(),
+    ): Transaction {
+        val adesso = Instant.now()
+        val movimento = Transaction(
+            id = UUID.randomUUID().toString(),
+            amount = importo.asExpense(),
+            date = data,
+            categoryId = scadenza.regola.categoryId,
+            accountId = scadenza.regola.accountId,
+            description = scadenza.regola.description,
+            source = TransactionSource.RECURRING,
+            recurringRuleId = scadenza.regola.id,
+            externalKey = scadenza.chiave,
+            createdAt = adesso,
+            updatedAt = adesso,
+        )
+        db.transactions().upsert(movimento.toEntity())
+        return movimento
+    }
+
+    /** Rimanda una scadenza: torna fra [giorni] giorni, la cadenza non si tocca. */
+    suspend fun rimandaScadenza(scadenza: Scadenza, giorni: Long) {
+        db.recurringRules().upsert(
+            Scadenze.rimanda(scadenza.regola, scadenza.occorrenza, giorni).toEntity()
+        )
+    }
+
+    /** Salta una scadenza: quel mese non è stato pagato e non lo sarà. */
+    suspend fun saltaScadenza(scadenza: Scadenza) {
+        db.recurringRules().upsert(Scadenze.salta(scadenza.regola, scadenza.occorrenza).toEntity())
     }
 
     /**

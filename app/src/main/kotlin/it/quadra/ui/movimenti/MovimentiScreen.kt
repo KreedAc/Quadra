@@ -52,6 +52,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.quadra.core.model.Category
 import it.quadra.core.model.Transaction
 import it.quadra.ui.iconFor
+import it.quadra.ui.ricorrenti.RigaScadenza
+import it.quadra.ui.ricorrenti.ScadenzaSheet
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
 import java.time.LocalDate
@@ -85,11 +87,43 @@ fun MovimentiScreen(
 
     val giornate = stato.giornateVisibili
     var aperto by remember { mutableStateOf<Transaction?>(null) }
+    // La scadenza in cima alla coda, se non è stata messa da parte per questa sessione.
+    var scadenzeRinviate by remember { mutableStateOf(emptySet<String>()) }
+    val scadenzaAperta = stato.daConfermare.firstOrNull { it.chiave !in scadenzeRinviate }
 
     LazyColumn(modifier = modifier.padding(horizontal = 18.dp)) {
         item { SelettoreMese(stato, viewModel) }
         item { SchedaSpeso(stato) }
         item { StrisciaGiorni(stato) { viewModel.scegliGiorno(it) } }
+
+        // Le scadenze restano in evidenza finché non ricevono una risposta: chiudere il
+        // foglio non deve far sparire l'informazione, altrimenti basta un tocco distratto
+        // per dimenticarsi una bolletta.
+        if (stato.daConfermare.isNotEmpty() || stato.inArrivo.isNotEmpty()) {
+            item {
+                Column(
+                    Modifier.padding(top = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    stato.daConfermare.forEach { scadenza ->
+                        RigaScadenza(
+                            scadenza = scadenza,
+                            categoria = stato.categoria(scadenza.regola.categoryId),
+                            inRitardo = true,
+                            onClick = { scadenzeRinviate = scadenzeRinviate - scadenza.chiave },
+                        )
+                    }
+                    stato.inArrivo.forEach { scadenza ->
+                        RigaScadenza(
+                            scadenza = scadenza,
+                            categoria = stato.categoria(scadenza.regola.categoryId),
+                            inRitardo = false,
+                            onClick = {},
+                        )
+                    }
+                }
+            }
+        }
 
         giornate.forEach { giornata ->
             item(key = "giorno-${giornata.data}") { IntestazioneGiorno(giornata) }
@@ -115,6 +149,21 @@ fun MovimentiScreen(
             item { StatoVuoto(stato.giornoScelto) }
         }
         item { Spacer(Modifier.height(96.dp)) }
+    }
+
+    scadenzaAperta?.let { scadenza ->
+        ScadenzaSheet(
+            scadenza = scadenza,
+            categoria = stato.categoria(scadenza.regola.categoryId),
+            conto = stato.conto(scadenza.regola.accountId),
+            quanteAncora = stato.daConfermare.size - 1,
+            onConferma = { viewModel.confermaScadenza(scadenza, it) },
+            onRimanda = { viewModel.rimandaScadenza(scadenza, it) },
+            onSalta = { viewModel.saltaScadenza(scadenza) },
+            // Chiudere senza rispondere la mette da parte solo per questa apertura
+            // dell'app: la riga resta sopra la lista, e riaprendo ritorna.
+            onChiudi = { scadenzeRinviate = scadenzeRinviate + scadenza.chiave },
+        )
     }
 
     aperto?.let { movimento ->

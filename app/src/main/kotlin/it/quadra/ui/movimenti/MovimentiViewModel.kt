@@ -4,10 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.quadra.core.ledger.Andamento
 import it.quadra.core.ledger.Ledger
+import it.quadra.core.ledger.Totals
 import it.quadra.core.model.Account
 import it.quadra.core.model.Category
 import it.quadra.core.model.Money
+import it.quadra.core.model.RecurringRule
 import it.quadra.core.model.Transaction
+import it.quadra.core.scadenze.Scadenza
+import it.quadra.core.scadenze.Scadenze
 import it.quadra.data.LedgerRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,6 +48,10 @@ data class StatoMovimenti(
     val giornoScelto: LocalDate? = null,
     /** Speso contro disponibile: c'è sempre, non dipende da niente che l'utente debba impostare. */
     val andamento: Andamento = Andamento.calcola(Money.ZERO, Money.ZERO),
+    /** Scadenze ricorrenti che aspettano una conferma, dalla più vecchia. */
+    val daConfermare: List<Scadenza> = emptyList(),
+    /** Scadenze che devono ancora arrivare, per non farsi trovare impreparati. */
+    val inArrivo: List<Scadenza> = emptyList(),
 ) {
     /** Le giornate da mostrare: tutte, oppure solo quella scelta nella striscia. */
     val giornateVisibili: List<Giornata>
@@ -103,6 +111,20 @@ data class StatoMovimenti(
     }
 }
 
+/**
+ * I flussi che non entrano nel `combine` a cinque posti.
+ *
+ * Kotlin ne offre uno tipizzato fino a cinque argomenti: oltre, o si passa a quello
+ * generico che perde i tipi, o si raggruppa. Raggruppare costa una data class e tiene
+ * tutto controllato dal compilatore.
+ */
+private data class Contorno(
+    val giorno: LocalDate?,
+    val totali: Totals,
+    val regole: List<RecurringRule>,
+    val registrate: Set<String>,
+)
+
 /** Movimento appena cancellato, in attesa che scada la finestra per annullare. */
 data class CancellazioneInCorso(val movimenti: List<Transaction>)
 
@@ -120,10 +142,16 @@ class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel()
         mese.flatMapLatest { repository.observeMonth(it) },
         repository.observeCategories(),
         repository.observeAccounts(),
-        combine(giorno, repository.observeTotals()) { g, t -> g to t },
-    ) { meseCorrente, movimenti, categorie, conti, (giornoScelto, totali) ->
+        combine(
+            giorno,
+            repository.observeTotals(),
+            repository.observeRecurring(),
+            repository.observeScadenzeRegistrate(),
+        ) { g, totali, regole, registrate -> Contorno(g, totali, regole, registrate) },
+    ) { meseCorrente, movimenti, categorie, conti, contorno ->
         val giornate = raggruppaPerGiorno(movimenti)
         val speso = Ledger.totalSpent(movimenti)
+        val attive = contorno.regole.filter { it.active }
         StatoMovimenti(
             mese = meseCorrente,
             giornate = giornate,
@@ -133,8 +161,10 @@ class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel()
             conti = conti,
             caricato = true,
             striscia = striscia(meseCorrente, giornate),
-            giornoScelto = giornoScelto,
-            andamento = Andamento.calcola(speso, totali.available),
+            giornoScelto = contorno.giorno,
+            andamento = Andamento.calcola(speso, contorno.totali.available),
+            daConfermare = Scadenze.daConfermare(attive, contorno.registrate),
+            inArrivo = Scadenze.inArrivo(attive, contorno.registrate),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatoMovimenti())
 
@@ -187,6 +217,19 @@ class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel()
                 description = descrizione,
             )
         }
+    }
+
+    /** Registra il pagamento di una scadenza con l'importo davvero pagato. */
+    fun confermaScadenza(scadenza: Scadenza, importo: Money) {
+        viewModelScope.launch { repository.confermaScadenza(scadenza, importo) }
+    }
+
+    fun rimandaScadenza(scadenza: Scadenza, giorni: Long) {
+        viewModelScope.launch { repository.rimandaScadenza(scadenza, giorni) }
+    }
+
+    fun saltaScadenza(scadenza: Scadenza) {
+        viewModelScope.launch { repository.saltaScadenza(scadenza) }
     }
 
     fun modifica(

@@ -116,7 +116,13 @@ data class RicorrenteJson(
     val giornoDelMese: Int? = null,
     val attiva: Boolean = true,
     val dateSaltate: List<String> = emptyList(),
-    val automatica: Boolean = true,
+    /**
+     * I rinvii, come "occorrenza>quando riproporla".
+     *
+     * Sostituisce `automatica`, che non esiste più: le ricorrenti non registrano niente
+     * da sole. Un backup vecchio porta ancora quel campo e viene semplicemente ignorato.
+     */
+    val rinvii: List<String> = emptyList(),
 )
 
 /** Cosa può andare storto leggendo un file scelto dall'utente. */
@@ -201,7 +207,8 @@ object Backup {
         id = id, descrizione = description, importo = amount.cents, categoria = categoryId,
         conto = accountId, ogni = every, unita = unit.name, inizio = startDate.toString(),
         fine = endDate?.toString(), giornoDelMese = dayOfMonth, attiva = active,
-        dateSaltate = skippedDates.sorted().map { it.toString() }, automatica = autoInsert,
+        dateSaltate = skippedDates.sorted().map { it.toString() },
+        rinvii = rimandi.toSortedMap().map { (occorrenza, quando) -> "$occorrenza>$quando" },
     )
 
     // ───────────────────────────────────────────────── verso il dominio
@@ -233,7 +240,11 @@ object Backup {
         accountId = conto, every = ogni, unit = enumOrDefault(unita, RecurrenceUnit.MONTH),
         startDate = LocalDate.parse(inizio), endDate = fine?.let(LocalDate::parse),
         dayOfMonth = giornoDelMese, active = attiva,
-        skippedDates = dateSaltate.map(LocalDate::parse).toSet(), autoInsert = automatica,
+        skippedDates = dateSaltate.map(LocalDate::parse).toSet(),
+        rimandi = rinvii.mapNotNull { riga ->
+            val pezzi = riga.split('>')
+            if (pezzi.size == 2) LocalDate.parse(pezzi[0]) to LocalDate.parse(pezzi[1]) else null
+        }.toMap(),
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(nome: String, riserva: T): T =

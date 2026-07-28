@@ -2,12 +2,10 @@ package it.quadra.core.recurrence
 
 import it.quadra.core.model.RecurrenceUnit
 import it.quadra.core.model.RecurringRule
-import it.quadra.core.model.Transaction
-import it.quadra.core.model.TransactionSource
 import java.time.LocalDate
 
 /**
- * Calcola quando cade una regola ricorrente e ne materializza i movimenti.
+ * Calcola quando cade una regola ricorrente.
  *
  * Due proprietà che il codice qui sotto garantisce e che i test verificano:
  *
@@ -16,10 +14,10 @@ import java.time.LocalDate
  *    31 gennaio porta a febbraio 28, marzo 28, aprile 28: la regola "il 31 di ogni mese"
  *    scivolerebbe silenziosamente al 28 per sempre.
  *
- * 2. Idempotenza. [materialize] riceve le occorrenze già presenti e non le riproduce,
- *    così può girare a ogni avvio dell'app senza duplicare nulla. Rispetta anche le date
- *    che l'utente ha cancellato a mano, altrimenti ciò che si cancella oggi ricompare
- *    domani.
+ * 2. Nessuna scrittura. Il motore calcola soltanto date. Se da una data debba nascere
+ *    un movimento lo decide [it.quadra.core.scadenze.Scadenze], e comunque nasce solo
+ *    quando l'utente conferma di aver pagato: un pagamento previsto non è un pagamento
+ *    avvenuto, e l'app non ha modo di sapere la differenza.
  */
 object RecurrenceEngine {
 
@@ -61,35 +59,6 @@ object RecurrenceEngine {
         return null
     }
 
-    /**
-     * Crea i movimenti mancanti per la regola fino a [upTo] compreso.
-     *
-     * @param existingDates date per cui il movimento esiste già; vengono saltate.
-     * @param idFactory genera l'id del nuovo movimento — iniettato invece che chiamare
-     *        UUID.randomUUID() qui dentro, così i test sono deterministici.
-     */
-    fun materialize(
-        rule: RecurringRule,
-        upTo: LocalDate,
-        existingDates: Set<LocalDate> = emptySet(),
-        idFactory: (RecurringRule, LocalDate) -> String,
-    ): List<Transaction> {
-        if (!rule.autoInsert) return emptyList()
-        return occurrences(rule, rule.startDate, upTo)
-            .filter { it !in existingDates && it !in rule.skippedDates }
-            .map { date ->
-                Transaction(
-                    id = idFactory(rule, date),
-                    amount = rule.amount,
-                    date = date,
-                    categoryId = rule.categoryId,
-                    accountId = rule.accountId,
-                    description = rule.description,
-                    source = TransactionSource.RECURRING,
-                    recurringRuleId = rule.id,
-                )
-            }
-    }
 
     /** N-esima occorrenza della regola, contando da zero su [RecurringRule.startDate]. */
     private fun occurrenceAt(rule: RecurringRule, index: Int): LocalDate {

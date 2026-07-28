@@ -19,7 +19,6 @@ class RecurrenceEngineTest {
         end: String? = null,
         dayOfMonth: Int? = null,
         active: Boolean = true,
-        autoInsert: Boolean = true,
     ) = RecurringRule(
         id = "r1",
         description = "Affitto",
@@ -32,7 +31,6 @@ class RecurrenceEngineTest {
         endDate = end?.let(LocalDate::parse),
         dayOfMonth = dayOfMonth,
         active = active,
-        autoInsert = autoInsert,
     )
 
     private fun dates(vararg iso: String) = iso.map(LocalDate::parse)
@@ -190,57 +188,6 @@ class RecurrenceEngineTest {
     fun `prossima scadenza è nulla oltre la fine`() {
         val r = rule(start = "2026-01-15", end = "2026-03-15")
         assertNull(RecurrenceEngine.nextOccurrence(r, LocalDate.parse("2026-04-01")))
-    }
-
-    @Test
-    fun `materialize crea i movimenti mancanti`() {
-        val r = rule(start = "2026-01-15")
-        val movimenti = RecurrenceEngine.materialize(
-            rule = r,
-            upTo = LocalDate.parse("2026-03-31"),
-            idFactory = { rule, date -> "${rule.id}@$date" },
-        )
-        assertEquals(3, movimenti.size)
-        assertEquals(dates("2026-01-15", "2026-02-15", "2026-03-15"), movimenti.map { it.date })
-        assertTrue(movimenti.all { it.source == TransactionSource.RECURRING })
-        assertTrue(movimenti.all { it.recurringRuleId == "r1" })
-        assertTrue(movimenti.all { it.amount == Money.of(-750) })
-    }
-
-    @Test
-    fun `materialize non duplica ciò che esiste già`() {
-        val r = rule(start = "2026-01-15")
-        val movimenti = RecurrenceEngine.materialize(
-            rule = r,
-            upTo = LocalDate.parse("2026-03-31"),
-            existingDates = setOf(LocalDate.parse("2026-01-15"), LocalDate.parse("2026-02-15")),
-            idFactory = { rule, date -> "${rule.id}@$date" },
-        )
-        assertEquals(dates("2026-03-15"), movimenti.map { it.date })
-    }
-
-    @Test
-    fun `materialize è idempotente se rieseguito`() {
-        val r = rule(start = "2026-01-15")
-        val upTo = LocalDate.parse("2026-03-31")
-        val idFactory = { rule: RecurringRule, date: LocalDate -> "${rule.id}@$date" }
-
-        val primaEsecuzione = RecurrenceEngine.materialize(r, upTo, idFactory = idFactory)
-        val secondaEsecuzione = RecurrenceEngine.materialize(
-            r, upTo, existingDates = primaEsecuzione.map { it.date }.toSet(), idFactory = idFactory,
-        )
-        assertTrue(secondaEsecuzione.isEmpty())
-    }
-
-    @Test
-    fun `le regole non automatiche non materializzano nulla`() {
-        // Le bollette hanno importo variabile: l'app le propone, non le inventa.
-        val movimenti = RecurrenceEngine.materialize(
-            rule = rule(autoInsert = false),
-            upTo = LocalDate.parse("2026-12-31"),
-            idFactory = { _, _ -> "x" },
-        )
-        assertTrue(movimenti.isEmpty())
     }
 
     @Test

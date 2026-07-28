@@ -26,10 +26,6 @@ class QuadraApp : Application() {
         scope.launch {
             // Al primo avvio popola conti e categorie; poi non fa nulla.
             repository.seedIfEmpty()
-            // Crea i movimenti delle ricorrenti scadute. È idempotente, quindi può
-            // girare a ogni avvio senza duplicare né resuscitare ciò che è stato
-            // cancellato a mano.
-            repository.materializeRecurring()
         }
     }
 }

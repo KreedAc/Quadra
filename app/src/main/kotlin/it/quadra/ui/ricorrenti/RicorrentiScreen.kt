@@ -96,13 +96,7 @@ class RicorrentiViewModel(private val repository: LedgerRepository) : ViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatoRicorrenti())
 
     fun salva(regola: RecurringRule) {
-        viewModelScope.launch {
-            repository.salvaRicorrente(regola)
-            // Una regola che parte da una data passata ha già delle scadenze arretrate:
-            // generarle subito evita che compaiano al prossimo avvio, quando l'utente
-            // non ricorderà più di averla creata.
-            repository.materializeRecurring()
-        }
+        viewModelScope.launch { repository.salvaRicorrente(regola) }
     }
 
     fun rimuovi(regola: RecurringRule) {
@@ -114,9 +108,12 @@ class RicorrentiViewModel(private val repository: LedgerRepository) : ViewModel(
  * Le spese che si ripetono.
  *
  * Sono la parte grossa e prevedibile del bilancio — affitto, bollette, abbonamenti,
- * rate — e sono anche il motivo per cui si smette di usare i tracker manuali: reinserire
- * ogni mese le stesse otto voci stanca prima di dicembre. Qui si scrivono una volta e
- * l'app le mette da sola alla scadenza.
+ * rate — e reinserirle a mano ogni mese è il motivo per cui si smette di usare un
+ * tracker prima di dicembre.
+ *
+ * Qui si scrivono una volta e alla scadenza l'app le ricorda. Non le registra: un
+ * pagamento previsto non è un pagamento avvenuto, e finché non lo confermi il saldo
+ * resta quello vero.
  */
 @Composable
 fun RicorrentiScreen(
@@ -304,6 +301,13 @@ private fun FoglioRegola(
             )
             CampoTesto(descrizione, "Nome, per esempio Affitto") { descrizione = it }
 
+            Text(
+                "Quanto ti aspetti di pagare. Alla scadenza lo trovi già scritto e lo " +
+                    "correggi se l'importo è diverso — le bollette cambiano ogni volta.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
             ImportoGrande(digitato)
             Tastierino(digitato) { digitato = it }
 
@@ -383,9 +387,10 @@ private fun FoglioRegola(
                         unit = cadenza.second,
                         startDate = iniziale?.startDate ?: partenza(giorno, mensile),
                         dayOfMonth = if (mensile) giorno else null,
-                        // Le occorrenze già saltate a mano restano saltate: modificare
-                        // l'importo non è chiedere di far rinascere ciò che si è tolto.
+                        // Salti e rinvii già decisi restano: correggere l'importo non è
+                        // chiedere di far riapparire ciò che si è messo da parte.
                         skippedDates = iniziale?.skippedDates.orEmpty(),
+                        rimandi = iniziale?.rimandi.orEmpty(),
                     )
                 )
             }
@@ -440,8 +445,8 @@ private fun Vuoto() {
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            "Affitto, bollette, abbonamenti, rate: scrivili una volta e " +
-                "l'app li mette da sola alla scadenza.",
+            "Affitto, bollette, abbonamenti, rate: scrivili una volta e alla scadenza " +
+                "l'app te li ricorda. Registri tu quanto hai pagato davvero.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

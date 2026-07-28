@@ -5,12 +5,18 @@ import java.time.LocalDate
 enum class RecurrenceUnit { DAY, WEEK, MONTH, YEAR }
 
 /**
- * Regola per le spese che si ripetono.
+ * Promemoria per le spese che si ripetono.
  *
- * È la risposta al problema di abbandono dei tracker manuali: affitto, condominio,
- * bollette, abbonamenti, rate, assicurazione e bollo sono la parte grossa e prevedibile
- * del bilancio di una famiglia, e l'app può inserirli da sola. L'utente resta a mano
- * solo sulle spese variabili, che sono quelle che gli interessa davvero guardare.
+ * Ricorda, non registra. È una distinzione che sembra sottile e non lo è: una regola
+ * ricorrente descrive un pagamento *previsto*, e l'app non ha modo di sapere se è
+ * davvero avvenuto. Un abbonamento può non partire per fondi insufficienti e venire
+ * addebitato due giorni dopo; un bonifico può essere rifiutato. Se l'app scrivesse il
+ * movimento alla scadenza, mostrerebbe un saldo che non esiste — e una carta in negativo
+ * per un addebito mai avvenuto porta chi la guarda a decidere male su soldi veri.
+ *
+ * Quindi alla scadenza l'app chiede, e il movimento nasce solo quando l'utente conferma
+ * quanto ha pagato davvero. Questo risolve anche le bollette, dove l'importo cambia ogni
+ * volta e un valore fisso sarebbe sbagliato per definizione.
  *
  * [every] più [unit] copre tutti i casi reali senza un'enumerazione rigida:
  * mensile è (1, MONTH), le bollette gas bimestrali sono (2, MONTH), l'IMU semestrale
@@ -43,11 +49,14 @@ data class RecurringRule(
      */
     val skippedDates: Set<LocalDate> = emptySet(),
     /**
-     * Se true il movimento viene creato automaticamente alla scadenza.
-     * Se false l'app si limita a proporlo, e l'utente conferma l'importo —
-     * utile per le bollette, dove la cifra cambia ogni volta.
+     * Scadenze rimandate: da quale occorrenza a quando riproporla.
+     *
+     * Rimandare sposta il promemoria, mai la cadenza. Chi rinvia l'affitto del 15 di tre
+     * giorni vuole che gli venga richiesto il 18, non che l'affitto diventi una spesa del
+     * 18 di ogni mese: sommare i rinvii alla regola la farebbe scivolare di mese in mese
+     * fino a non somigliare più a niente.
      */
-    val autoInsert: Boolean = true,
+    val rimandi: Map<LocalDate, LocalDate> = emptyMap(),
 ) {
     init {
         require(every >= 1) { "L'intervallo di ricorrenza deve essere almeno 1, ricevuto $every" }
