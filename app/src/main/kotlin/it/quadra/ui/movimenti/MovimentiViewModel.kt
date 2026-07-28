@@ -194,6 +194,20 @@ class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel()
         }
     }
 
+    fun modifica(
+        movimento: Transaction,
+        importo: Money,
+        categoriaId: String,
+        contoId: String,
+        data: LocalDate,
+        descrizione: String,
+        note: String,
+    ) {
+        viewModelScope.launch {
+            repository.modifica(movimento, importo, categoriaId, contoId, data, descrizione, note)
+        }
+    }
+
     /**
      * Cancella subito e tiene da parte quel che serve per annullare.
      * Passata la finestra, non resta traccia da nessuna parte.

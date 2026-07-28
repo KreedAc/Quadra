@@ -136,6 +136,30 @@ class LedgerRepository(private val db: AppDatabase) {
             ?.let { db.transactions().legsOfTransfer(it).map { e -> e.toDomain() } }
             ?: listOf(transaction)
 
+    /** Applica le correzioni fatte nel foglio di dettaglio. */
+    suspend fun modifica(
+        movimento: Transaction,
+        importo: Money,
+        categoriaId: String,
+        contoId: String,
+        data: LocalDate,
+        descrizione: String,
+        note: String,
+    ) {
+        db.transactions().upsert(
+            Edits.edit(
+                transaction = movimento,
+                amount = importo,
+                categoryId = categoriaId,
+                accountId = contoId,
+                date = data,
+                description = descrizione,
+                notes = note,
+                now = Instant.now(),
+            ).toEntity()
+        )
+    }
+
     suspend fun moveToAccount(transaction: Transaction, accountId: String) {
         db.transactions().upsert(
             Edits.moveToAccount(transaction, accountId, Instant.now()).toEntity()

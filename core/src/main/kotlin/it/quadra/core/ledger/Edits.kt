@@ -91,6 +91,45 @@ object Edits {
     }
 
     /**
+     * Riscrive un movimento con quello che l'utente ha corretto nel foglio di dettaglio.
+     *
+     * L'importo arriva come grandezza e il verso viene dal movimento di partenza: chi
+     * corregge uno stipendio da 1.200 a 1.250 non sta dicendo che ora è un'uscita, e
+     * chiedere all'utente di digitare il segno sarebbe un modo garantito per sbagliarlo.
+     * Il verso si cambia scegliendo una categoria dell'altro tipo, che è una decisione
+     * esplicita, non un carattere digitato di sfuggita.
+     *
+     * L'identificativo e la data di creazione non si toccano mai: il movimento resta lo
+     * stesso oggetto dentro i backup già scritti, corretto ma non sostituito.
+     *
+     * Rifiuta le gambe di trasferimento come [moveToAccount], e per lo stesso motivo.
+     */
+    fun edit(
+        transaction: Transaction,
+        amount: Money,
+        categoryId: String,
+        accountId: String,
+        date: LocalDate,
+        description: String = transaction.description,
+        notes: String = transaction.notes,
+        now: Instant = Instant.EPOCH,
+    ): Transaction {
+        require(!transaction.isTransfer) {
+            "Le gambe di un trasferimento si correggono con editTransfer, non una alla volta"
+        }
+        require(!amount.isZero) { "Un movimento da zero non ha senso: si cancella" }
+        return transaction.copy(
+            amount = if (transaction.amount.isIncome) amount.asIncome() else amount.asExpense(),
+            categoryId = categoryId,
+            accountId = accountId,
+            date = date,
+            description = description.trim(),
+            notes = notes.trim(),
+            updatedAt = now,
+        )
+    }
+
+    /**
      * Riscrive entrambe le gambe di un trasferimento in modo che restino coerenti.
      *
      * L'identificativo di ciascuna gamba non cambia mai: i movimenti finiscono nei backup

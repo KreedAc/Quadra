@@ -1,5 +1,11 @@
 package it.quadra.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -115,7 +121,13 @@ fun Root(repository: LedgerRepository) {
         floatingActionButton = {
             // Il pulsante compare solo dove ha senso: registrare una spesa dalla
             // schermata delle impostazioni non vuol dire niente.
-            if (destinazione == Destinazione.MOVIMENTI && !categorieAperte && !ricorrentiAperte) {
+            // Compare crescendo invece di apparire: cambiando scheda si vede che è
+            // arrivato, non che era già lì e non l'avevi notato.
+            AnimatedVisibility(
+                visible = destinazione == Destinazione.MOVIMENTI && !categorieAperte && !ricorrentiAperte,
+                enter = scaleIn(tween(180)) + fadeIn(tween(180)),
+                exit = scaleOut(tween(140)) + fadeOut(tween(140)),
+            ) {
                 val forma = RoundedCornerShape(19.dp)
                 FloatingActionButton(
                     onClick = { foglioAperto = true },

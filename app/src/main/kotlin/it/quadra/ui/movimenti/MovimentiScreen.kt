@@ -1,9 +1,15 @@
 package it.quadra.ui.movimenti
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -87,6 +93,7 @@ fun MovimentiScreen(
 
     val giornate = stato.giornateVisibili
     var budgetAperto by remember { mutableStateOf(false) }
+    var aperto by remember { mutableStateOf<Transaction?>(null) }
 
     LazyColumn(modifier = modifier.padding(horizontal = 18.dp)) {
         item { SelettoreMese(stato, viewModel) }
@@ -104,7 +111,11 @@ fun MovimentiScreen(
                     // L'ultima riga del giorno non porta il filo: chiuderebbe un elenco
                     // che è già chiuso dall'intestazione del giorno dopo.
                     ultimo = indice == giornata.movimenti.lastIndex,
-                    onLongClick = { viewModel.cancella(movimento) },
+                    onClick = { aperto = movimento },
+                    // Le righe scivolano via invece di sparire di colpo: la
+                    // cancellazione è annullabile, e vedere la riga andarsene rende
+                    // credibile che possa tornare.
+                    modifier = Modifier.animateItem(),
                 )
             }
         }
@@ -113,6 +124,26 @@ fun MovimentiScreen(
             item { StatoVuoto(stato.giornoScelto) }
         }
         item { Spacer(Modifier.height(96.dp)) }
+    }
+
+    aperto?.let { movimento ->
+        // Si prende la versione fresca dallo stato: dopo un salvataggio il foglio deve
+        // mostrare quello che è stato scritto, non quello su cui si era toccato.
+        val corrente = giornate.flatMap { it.movimenti }.firstOrNull { it.id == movimento.id }
+            ?: movimento
+        DettaglioSheet(
+            movimento = corrente,
+            stato = stato,
+            onChiudi = { aperto = null },
+            onSalva = { importo, categoriaId, contoId, data, descrizione, note ->
+                viewModel.modifica(corrente, importo, categoriaId, contoId, data, descrizione, note)
+                aperto = null
+            },
+            onElimina = {
+                viewModel.cancella(corrente)
+                aperto = null
+            },
+        )
     }
 
     if (budgetAperto) {
@@ -206,11 +237,17 @@ private fun SelettoreMese(stato: StatoMovimenti, viewModel: MovimentiViewModel) 
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = stato.mese.atDay(1).format(formatoMese).replaceFirstChar { it.uppercase() },
-            style = MaterialTheme.typography.headlineSmall,
+        AnimatedContent(
+            targetState = stato.mese,
+            transitionSpec = { fadeIn(tween(160)) togetherWith fadeOut(tween(160)) },
+            label = "mese",
             modifier = Modifier.weight(1f),
-        )
+        ) { mese ->
+            Text(
+                text = mese.atDay(1).format(formatoMese).replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.headlineSmall,
+            )
+        }
         Icon(
             it.quadra.ui.Icone.Sinistra,
             contentDescription = "Mese precedente",
@@ -252,11 +289,24 @@ private fun SchedaSpeso(stato: StatoMovimenti, onTocca: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(6.dp))
-        Text(
-            stato.speso.format(),
-            style = MaterialTheme.typography.displaySmall.tabular,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        AnimatedContent(
+            targetState = stato.speso,
+            transitionSpec = {
+                // Sale se il totale cresce, scende se cala: la direzione racconta il
+                // verso del cambiamento senza doverlo leggere.
+                val versoAlto = targetState.abs() > initialState.abs()
+                val da = if (versoAlto) 1 else -1
+                (slideInVertically { it * da } + fadeIn()) togetherWith
+                    (slideOutVertically { -it * da } + fadeOut())
+            },
+            label = "speso",
+        ) { importo ->
+            Text(
+                importo.format(),
+                style = MaterialTheme.typography.displaySmall.tabular,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
 
         val andamento = stato.andamento
         if (andamento == null) {
@@ -270,6 +320,13 @@ private fun SchedaSpeso(stato: StatoMovimenti, onTocca: () -> Unit) {
         }
 
         Spacer(Modifier.height(16.dp))
+        // Cresce in mezzo secondo invece di saltare: è la conferma visiva che la spesa
+        // appena registrata è entrata, e costa quanto una riga.
+        val riempimento by animateFloatAsState(
+            targetValue = andamento.frazione,
+            animationSpec = tween(durationMillis = 500),
+            label = "riempimento",
+        )
         Box(
             Modifier
                 .fillMaxWidth()
@@ -279,7 +336,7 @@ private fun SchedaSpeso(stato: StatoMovimenti, onTocca: () -> Unit) {
         ) {
             Box(
                 Modifier
-                    .fillMaxWidth(andamento.frazione)
+                    .fillMaxWidth(riempimento)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(99.dp))
                     .background(
@@ -364,7 +421,6 @@ private fun IntestazioneGiorno(giornata: Giornata) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RigaMovimento(
     movimento: Transaction,
@@ -372,13 +428,14 @@ private fun RigaMovimento(
     icona: String?,
     sottotitolo: String,
     ultimo: Boolean,
-    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
     val colore = categoria?.let { Color(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
     Column(
-        Modifier
+        modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = {}, onLongClick = onLongClick)
+            .clickable(onClick = onClick)
     ) {
     Row(
         modifier = Modifier
@@ -464,12 +521,6 @@ private fun StatoVuoto(giornoScelto: LocalDate?) {
         Text(
             "Tocca + per registrare la prima spesa",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "Tieni premuto su un movimento per eliminarlo",
-            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

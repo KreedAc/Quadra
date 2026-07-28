@@ -32,6 +32,74 @@ class EditsTest {
         groupId = "g1", idFactory = { "leg$it" },
     )
 
+    // ------------------------------------------------------------ correggere
+
+    private val entrata = Transaction(
+        id = "e1", amount = Money.of(1200), date = oggi,
+        categoryId = "entrate.stipendio", accountId = "carta_x",
+    )
+
+    @Test
+    fun `correggere cambia quello che si è toccato e nient'altro`() {
+        val prima = spesa("a", -4780, "carta_x")
+        val dopo = Edits.edit(
+            prima, Money.of(52, 30), "spesa.supermercato", "carta_y", oggi.minusDays(1),
+            description = "Esselunga",
+        )
+        assertEquals(Money.of(-52, 30), dopo.amount)
+        assertEquals("spesa.supermercato", dopo.categoryId)
+        assertEquals("carta_y", dopo.accountId)
+        assertEquals(oggi.minusDays(1), dopo.date)
+        assertEquals("Esselunga", dopo.description)
+        // Identità e origine non si toccano: è lo stesso movimento, corretto.
+        assertEquals(prima.id, dopo.id)
+        assertEquals(prima.createdAt, dopo.createdAt)
+        assertEquals(prima.source, dopo.source)
+    }
+
+    @Test
+    fun `l'importo si scrive senza segno e il verso resta quello che era`() {
+        // Chi corregge uno stipendio da 1200 a 1250 non sta dicendo che ora è un'uscita.
+        assertTrue(Edits.edit(entrata, Money.of(1250), "entrate.stipendio", "carta_x", oggi).amount.isIncome)
+        assertTrue(Edits.edit(spesa("a", -100, "carta_x"), Money.of(120), "spesa", "carta_x", oggi).amount.isExpense)
+    }
+
+    @Test
+    fun `correggere non altera il patrimonio complessivo per sbaglio`() {
+        val movimenti = listOf(spesa("a", -4780, "carta_x"))
+        val corretto = Edits.edit(movimenti[0], Money.of(30), "spesa", "carta_y", oggi)
+        val dopo = listOf(corretto)
+        // I cinquanta euro tolti alla carta X ricompaiono: nessuna compensazione serve.
+        assertEquals(Money.of(500), Ledger.balanceOf(cartaX, dopo))
+        assertEquals(Money.of(170), Ledger.balanceOf(cartaY, dopo))
+    }
+
+    @Test
+    fun `una gamba di trasferimento non si corregge da sola`() {
+        val (uscita, _) = trasferimento()
+        assertFailsWith<IllegalArgumentException> {
+            Edits.edit(uscita, Money.of(50), "spesa", "carta_y", oggi)
+        }
+    }
+
+    @Test
+    fun `un movimento da zero si rifiuta invece di essere salvato`() {
+        // Zero non è una correzione, è una cancellazione mascherata.
+        assertFailsWith<IllegalArgumentException> {
+            Edits.edit(spesa("a", -100, "carta_x"), Money.ZERO, "spesa", "carta_x", oggi)
+        }
+    }
+
+    @Test
+    fun `gli spazi intorno a descrizione e note vengono tolti`() {
+        val dopo = Edits.edit(
+            spesa("a", -100, "carta_x"), Money.of(1), "spesa", "carta_x", oggi,
+            description = "  Bar  ", notes = "  con Marco ",
+        )
+        assertEquals("Bar", dopo.description)
+        assertEquals("con Marco", dopo.notes)
+    }
+
     // ------------------------------------------------------------ cancellare
 
     @Test

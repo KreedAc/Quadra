@@ -1,5 +1,12 @@
 package it.quadra.ui.inserimento
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -76,19 +83,31 @@ fun AggiungiSheet(
         sheetState = stato,
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        val selezionata = scelta
-        if (selezionata == null) {
-            PassoGriglia(categorie, onPersonalizza) { scelta = it }
-        } else {
-            PassoImporto(
-                categoria = selezionata,
-                sottocategorie = tutteLeCategorie
-                    .filter { it.parentId == selezionata.id }
-                    .sortedBy { it.sortOrder },
-                conti = conti,
-                onCambiaCategoria = { scelta = null },
-                onSalva = onSalva,
-            )
+        // I due passi scorrono lateralmente: si capisce che è lo stesso gesto che
+        // avanza, e che indietro si torna.
+        AnimatedContent(
+            targetState = scelta,
+            transitionSpec = {
+                val avanti = targetState != null
+                val verso = if (avanti) 1 else -1
+                (slideInHorizontally { it * verso / 3 } + fadeIn(tween(180))) togetherWith
+                    (slideOutHorizontally { -it * verso / 3 } + fadeOut(tween(180)))
+            },
+            label = "passo",
+        ) { selezionata ->
+            if (selezionata == null) {
+                PassoGriglia(categorie, onPersonalizza) { scelta = it }
+            } else {
+                PassoImporto(
+                    categoria = selezionata,
+                    sottocategorie = tutteLeCategorie
+                        .filter { it.parentId == selezionata.id }
+                        .sortedBy { it.sortOrder },
+                    conti = conti,
+                    onCambiaCategoria = { scelta = null },
+                    onSalva = onSalva,
+                )
+            }
         }
     }
 }
