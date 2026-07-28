@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,9 +15,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -25,12 +26,9 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,7 +53,7 @@ import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
 
 /**
- * L'inserimento in due tocchi.
+ * L'inserimento in due tocchi, a schermo intero.
  *
  * Primo passo la griglia, mai una lista che scorre: le categorie stanno sempre nelle
  * stesse posizioni, e dopo una settimana il pollice ci arriva senza leggere. La velocità
@@ -64,29 +62,61 @@ import it.quadra.ui.theme.extra
  * Secondo passo il tastierino, con le sottocategorie già filtrate dalla scelta appena
  * fatta. Il tastierino è disegnato qui e non è quello di sistema: per i numeri quello di
  * sistema è lento, piccolo e pieno di tasti che non servono.
+ *
+ * Occupa tutto lo schermo invece di essere un foglio che sale dal basso. Un foglio si
+ * chiude trascinandolo, e su una griglia che si scorre col dito quei due gesti si
+ * contendono lo stesso movimento: capitava di far sparire tutto mentre si cercava una
+ * categoria. A schermo intero il gesto della griglia è solo della griglia, e la via
+ * d'uscita è una sola e visibile.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AggiungiSheet(
+fun AggiungiScreen(
     categorie: List<Category>,
     tutteLeCategorie: List<Category>,
     conti: List<Account>,
     onChiudi: () -> Unit,
     onPersonalizza: () -> Unit,
     onSalva: (importo: Money, categoriaId: String, contoId: String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val stato = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var scelta by remember { mutableStateOf<Category?>(null) }
 
-    ModalBottomSheet(
-        onDismissRequest = onChiudi,
-        sheetState = stato,
-        containerColor = MaterialTheme.colorScheme.surface,
-    ) {
+    // Il tasto indietro fa un passo alla volta: dal tastierino torna alla griglia, e
+    // solo dalla griglia esce. Uscire direttamente perderebbe l'importo digitato.
+    BackHandler { if (scelta != null) scelta = null else onChiudi() }
+
+    Column(modifier.background(MaterialTheme.colorScheme.background)) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(top = 8.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                if (scelta == null) "Nuova spesa" else "Quanto",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.weight(1f),
+            )
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable(onClick = onChiudi),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icone.Chiudi,
+                    contentDescription = "Chiudi",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+
         // I due passi scorrono lateralmente: si capisce che è lo stesso gesto che
         // avanza, e che indietro si torna.
         AnimatedContent(
             targetState = scelta,
+            modifier = Modifier.weight(1f),
             transitionSpec = {
                 val avanti = targetState != null
                 val verso = if (avanti) 1 else -1
@@ -118,7 +148,7 @@ private fun PassoGriglia(
     onPersonalizza: () -> Unit,
     onScelta: (Category) -> Unit,
 ) {
-    Column(Modifier.padding(horizontal = 18.dp).padding(bottom = 24.dp)) {
+    Column(Modifier.fillMaxSize().padding(horizontal = 18.dp).padding(bottom = 16.dp)) {
         Text(
             "Dove è andata",
             style = MaterialTheme.typography.bodyMedium,
@@ -127,7 +157,7 @@ private fun PassoGriglia(
         Spacer(Modifier.height(14.dp))
         LazyVerticalGrid(
             columns = GridCells.Fixed(4),
-            modifier = Modifier.heightIn(max = 460.dp),
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -213,7 +243,7 @@ private fun PassoImporto(
     val importo = digitato.importo
 
     Column(
-        modifier = Modifier.padding(horizontal = 18.dp).padding(bottom = 24.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp).padding(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(13.dp),
     ) {
         // Intestazione: la categoria scelta, toccabile per tornare alla griglia.
@@ -292,6 +322,10 @@ private fun PassoImporto(
                 }
             }
         }
+
+        // Lo spazio avanzato sta in mezzo: il tastierino e il salvataggio restano in
+        // basso, dove arriva il pollice, invece di galleggiare a metà schermo.
+        Spacer(Modifier.weight(1f))
 
         Tastierino(digitato) { digitato = it }
 

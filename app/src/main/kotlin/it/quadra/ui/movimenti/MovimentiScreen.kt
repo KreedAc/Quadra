@@ -26,16 +26,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,13 +49,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import it.quadra.core.input.Digitazione
 import it.quadra.core.model.Category
-import it.quadra.core.model.Money
 import it.quadra.core.model.Transaction
-import it.quadra.ui.common.Azione
-import it.quadra.ui.common.ImportoGrande
-import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
@@ -92,12 +84,11 @@ fun MovimentiScreen(
     }
 
     val giornate = stato.giornateVisibili
-    var budgetAperto by remember { mutableStateOf(false) }
     var aperto by remember { mutableStateOf<Transaction?>(null) }
 
     LazyColumn(modifier = modifier.padding(horizontal = 18.dp)) {
         item { SelettoreMese(stato, viewModel) }
-        item { SchedaSpeso(stato) { budgetAperto = true } }
+        item { SchedaSpeso(stato) }
         item { StrisciaGiorni(stato) { viewModel.scegliGiorno(it) } }
 
         giornate.forEach { giornata ->
@@ -142,17 +133,6 @@ fun MovimentiScreen(
             onElimina = {
                 viewModel.cancella(corrente)
                 aperto = null
-            },
-        )
-    }
-
-    if (budgetAperto) {
-        FoglioBudget(
-            attuale = stato.andamento?.budget ?: Money.ZERO,
-            onChiudi = { budgetAperto = false },
-            onSalva = {
-                viewModel.salvaBudget(it)
-                budgetAperto = false
             },
         )
     }
@@ -264,9 +244,20 @@ private fun SelettoreMese(stato: StatoMovimenti, viewModel: MovimentiViewModel) 
     }
 }
 
-/** L'unico posto, insieme al pulsante di salvataggio, dove compare il gradiente. */
+/**
+ * Quanto è uscito questo mese e quanto resta sui conti.
+ *
+ * La barra si riempie sul denaro che c'era all'inizio del mese, e il numero sotto è il
+ * saldo vero — non un residuo rispetto a un obiettivo. Chi apre l'app la sera vuole
+ * sapere quanto ha, e farglielo cercare in un'altra schermata è un tocco chiesto per
+ * niente. I conti vincolati restano fuori: sommarli farebbe credere di avere margine
+ * che non c'è.
+ *
+ * È l'unico posto, insieme al pulsante di salvataggio, dove compare il gradiente.
+ */
 @Composable
-private fun SchedaSpeso(stato: StatoMovimenti, onTocca: () -> Unit) {
+private fun SchedaSpeso(stato: StatoMovimenti) {
+    val andamento = stato.andamento
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -280,7 +271,6 @@ private fun SchedaSpeso(stato: StatoMovimenti, onTocca: () -> Unit) {
                     )
                 )
             )
-            .clickable(onClick = onTocca)
             .padding(20.dp),
     ) {
         Text(
@@ -308,17 +298,6 @@ private fun SchedaSpeso(stato: StatoMovimenti, onTocca: () -> Unit) {
             )
         }
 
-        val andamento = stato.andamento
-        if (andamento == null) {
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "Tocca per darti un budget mensile",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            return@Column
-        }
-
         Spacer(Modifier.height(16.dp))
         // Cresce in mezzo secondo invece di saltare: è la conferma visiva che la spesa
         // appena registrata è entrata, e costa quanto una riga.
@@ -340,10 +319,10 @@ private fun SchedaSpeso(stato: StatoMovimenti, onTocca: () -> Unit) {
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(99.dp))
                     .background(
-                        // Il rosso arriva solo quando si è davvero sforato. Colorare di
-                        // rosso l'ultimo quarto farebbe suonare l'allarme ogni mese
-                        // intorno al venti, e a quel punto smetterebbe di dire qualcosa.
-                        if (andamento.sforato) SolidColor(MaterialTheme.colorScheme.error)
+                        // Il rosso arriva solo quando i conti sono davvero sotto zero.
+                        // Colorare di rosso l'ultimo quarto farebbe suonare l'allarme
+                        // ogni mese verso il venti, e smetterebbe di dire qualcosa.
+                        if (andamento.inRosso) SolidColor(MaterialTheme.colorScheme.error)
                         else Brush.horizontalGradient(listOf(extra.brandStart, extra.brandEnd))
                     ),
             )
@@ -351,55 +330,17 @@ private fun SchedaSpeso(stato: StatoMovimenti, onTocca: () -> Unit) {
         Spacer(Modifier.height(9.dp))
         Row(Modifier.fillMaxWidth()) {
             Text(
-                buildString {
-                    append(if (andamento.sforato) "Sforato di " else "Restano ")
-                    append(andamento.restano.abs().format())
-                },
-                style = MaterialTheme.typography.bodySmall.tabular,
-                color = if (andamento.sforato) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurface,
+                "Disponibile",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
             Text(
-                andamento.alGiorno?.let { "${it.format()} al giorno" }
-                    ?: "su ${andamento.budget.format()}",
+                andamento.disponibile.format(),
                 style = MaterialTheme.typography.bodySmall.tabular,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (andamento.inRosso) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurface,
             )
-        }
-    }
-}
-
-/** Il budget si scrive col tastierino, come tutti gli altri importi dell'app. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FoglioBudget(attuale: Money, onChiudi: () -> Unit, onSalva: (Money) -> Unit) {
-    var digitato by remember { mutableStateOf(Digitazione.da(attuale)) }
-
-    ModalBottomSheet(
-        onDismissRequest = onChiudi,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surface,
-    ) {
-        Column(
-            Modifier.padding(horizontal = 18.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Text("Budget mensile", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Quanto vuoi spendere al massimo in un mese. Vale per tutti i mesi, " +
-                    "non va reimpostato ogni volta.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            ImportoGrande(digitato)
-            Tastierino(digitato) { digitato = it }
-            Azione("Salva", extra.brandEnd) { onSalva(digitato.importo) }
-            if (!attuale.isZero) {
-                Azione("Togli il budget", MaterialTheme.colorScheme.onSurfaceVariant) {
-                    onSalva(Money.ZERO)
-                }
-            }
         }
     }
 }

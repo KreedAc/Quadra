@@ -1,11 +1,16 @@
 package it.quadra.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -43,7 +48,7 @@ import it.quadra.ui.conti.ContiScreen
 import it.quadra.ui.conti.ContiViewModel
 import it.quadra.ui.impostazioni.ImpostazioniScreen
 import it.quadra.ui.impostazioni.ImpostazioniViewModel
-import it.quadra.ui.inserimento.AggiungiSheet
+import it.quadra.ui.inserimento.AggiungiScreen
 import it.quadra.ui.movimenti.MovimentiScreen
 import it.quadra.ui.movimenti.MovimentiViewModel
 import it.quadra.ui.ricorrenti.RicorrentiScreen
@@ -65,6 +70,18 @@ enum class Destinazione(val etichetta: String, val icona: ImageVector) {
     IMPOSTAZIONI("Impostazioni", Icone.Cursori),
 }
 
+/** Le schermate che si aprono sopra una scheda invece di sostituirla nella barra. */
+private enum class Sotto { CATEGORIE, RICORRENTI, AGGIUNGI }
+
+/**
+ * Cosa si sta guardando adesso.
+ *
+ * La scheda resta anche quando c'è una schermata sopra, ed è quello che permette alla
+ * barra in basso di riportare indietro: toccare "Conti" mentre si è dentro le categorie
+ * deve andare ai conti, non muovere l'evidenziazione lasciando la stessa pagina.
+ */
+private data class Vista(val scheda: Destinazione, val sotto: Sotto? = null)
+
 /** Fabbrica minima: evita di ripetere l'oggetto anonimo a ogni ViewModel. */
 class Fabbrica<T : ViewModel>(private val costruisci: () -> T) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
@@ -74,16 +91,13 @@ class Fabbrica<T : ViewModel>(private val costruisci: () -> T) : ViewModelProvid
 /**
  * L'impalcatura dell'app.
  *
- * La navigazione fra le quattro schede è tenuta a stato semplice invece che con un
- * grafo di navigazione: per quattro destinazioni di primo livello, sempre presenti e
- * senza parametri, un grafo aggiunge cerimonia senza aggiungere niente.
+ * La navigazione è tenuta a stato semplice invece che con un grafo: per quattro
+ * destinazioni di primo livello e tre schermate che ci si aprono sopra, un grafo
+ * aggiunge cerimonia senza aggiungere niente.
  */
 @Composable
 fun Root(repository: LedgerRepository) {
-    var destinazione by remember { mutableStateOf(Destinazione.MOVIMENTI) }
-    var foglioAperto by remember { mutableStateOf(false) }
-    var categorieAperte by remember { mutableStateOf(false) }
-    var ricorrentiAperte by remember { mutableStateOf(false) }
+    var vista by remember { mutableStateOf(Vista(Destinazione.MOVIMENTI)) }
     val snackbar = remember { SnackbarHostState() }
 
     val movimentiVM: MovimentiViewModel = viewModel(factory = Fabbrica { MovimentiViewModel(repository) })
@@ -93,44 +107,59 @@ fun Root(repository: LedgerRepository) {
     val impostazioniVM: ImpostazioniViewModel = viewModel(factory = Fabbrica { ImpostazioniViewModel(repository) })
     val ricorrentiVM: RicorrentiViewModel = viewModel(factory = Fabbrica { RicorrentiViewModel(repository) })
 
+    // Il tasto indietro del telefono chiude quello che è aperto, come la freccia in
+    // alto. Senza, l'unico gesto che tutti gli utenti Android conoscono uscirebbe
+    // dall'app da dentro una sottoschermata.
+    // L'inserimento si gestisce l'indietro da sé, perché lì un passo indietro torna
+    // alla griglia invece di chiudere tutto.
+    BackHandler(enabled = vista.sotto != null && vista.sotto != Sotto.AGGIUNGI) {
+        vista = vista.copy(sotto = null)
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp,
-            ) {
-                Destinazione.entries.forEach { voce ->
-                    NavigationBarItem(
-                        selected = destinazione == voce,
-                        onClick = { destinazione = voce },
-                        icon = { Icon(voce.icona, contentDescription = null) },
-                        label = { Text(voce.etichetta, style = MaterialTheme.typography.labelSmall) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = extra.brandEnd,
-                            selectedTextColor = extra.brandEnd,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            indicatorColor = Color.Transparent,
-                        ),
-                    )
+            // L'inserimento occupa tutto lo schermo: la barra sotto offrirebbe una via
+            // di fuga che perde quello che si sta scrivendo.
+            if (vista.sotto != Sotto.AGGIUNGI) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp,
+                ) {
+                    Destinazione.entries.forEach { voce ->
+                        NavigationBarItem(
+                            selected = vista.scheda == voce && vista.sotto == null,
+                            // Torna sempre al primo livello: è il comportamento che ci
+                            // si aspetta da una barra di navigazione, e senza questo
+                            // toccarla da dentro le categorie non cambiava schermata.
+                            onClick = { vista = Vista(voce) },
+                            icon = { Icon(voce.icona, contentDescription = null) },
+                            label = { Text(voce.etichetta, style = MaterialTheme.typography.labelSmall) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = extra.brandEnd,
+                                selectedTextColor = extra.brandEnd,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                indicatorColor = Color.Transparent,
+                            ),
+                        )
+                    }
                 }
             }
         },
         floatingActionButton = {
             // Il pulsante compare solo dove ha senso: registrare una spesa dalla
-            // schermata delle impostazioni non vuol dire niente.
-            // Compare crescendo invece di apparire: cambiando scheda si vede che è
-            // arrivato, non che era già lì e non l'avevi notato.
+            // schermata delle impostazioni non vuol dire niente. Compare crescendo
+            // invece di apparire, così cambiando scheda si vede che è arrivato.
             AnimatedVisibility(
-                visible = destinazione == Destinazione.MOVIMENTI && !categorieAperte && !ricorrentiAperte,
+                visible = vista == Vista(Destinazione.MOVIMENTI),
                 enter = scaleIn(tween(180)) + fadeIn(tween(180)),
                 exit = scaleOut(tween(140)) + fadeOut(tween(140)),
             ) {
                 val forma = RoundedCornerShape(19.dp)
                 FloatingActionButton(
-                    onClick = { foglioAperto = true },
+                    onClick = { vista = vista.copy(sotto = Sotto.AGGIUNGI) },
                     containerColor = Color.Transparent,
                     contentColor = Color(0xFF04121A),
                     shape = forma,
@@ -155,46 +184,78 @@ fun Root(repository: LedgerRepository) {
             }
         },
     ) { insets ->
-        val contenuto = Modifier.fillMaxSize().padding(insets)
-        when {
-            categorieAperte -> CategorieScreen(
-                viewModel = categorieVM,
-                onIndietro = { categorieAperte = false },
-                modifier = contenuto,
-            )
-            ricorrentiAperte -> RicorrentiScreen(
-                viewModel = ricorrentiVM,
-                onIndietro = { ricorrentiAperte = false },
-                modifier = contenuto,
-            )
-            destinazione == Destinazione.MOVIMENTI -> MovimentiScreen(movimentiVM, snackbar, contenuto)
-            destinazione == Destinazione.CONTI -> ContiScreen(contiVM, contenuto)
-            destinazione == Destinazione.STATISTICHE -> StatisticheScreen(statisticheVM, contenuto)
-            destinazione == Destinazione.IMPOSTAZIONI -> ImpostazioniScreen(
-                viewModel = impostazioniVM,
-                snackbar = snackbar,
-                onApriCategorie = { categorieAperte = true },
-                onApriRicorrenti = { ricorrentiAperte = true },
-                modifier = contenuto,
-            )
+        AnimatedContent(
+            targetState = vista,
+            transitionSpec = { transizione(initialState, targetState) },
+            label = "vista",
+        ) { corrente ->
+            val contenuto = Modifier.fillMaxSize().padding(insets)
+            when (corrente.sotto) {
+                Sotto.CATEGORIE -> CategorieScreen(
+                    viewModel = categorieVM,
+                    onIndietro = { vista = vista.copy(sotto = null) },
+                    modifier = contenuto,
+                )
+
+                Sotto.RICORRENTI -> RicorrentiScreen(
+                    viewModel = ricorrentiVM,
+                    onIndietro = { vista = vista.copy(sotto = null) },
+                    modifier = contenuto,
+                )
+
+                Sotto.AGGIUNGI -> {
+                    val stato by movimentiVM.stato.collectAsStateWithLifecycle()
+                    AggiungiScreen(
+                        categorie = stato.categoriePrincipali,
+                        tutteLeCategorie = stato.categorie,
+                        conti = stato.conti,
+                        onChiudi = { vista = vista.copy(sotto = null) },
+                        onPersonalizza = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
+                        onSalva = { importo, categoriaId, contoId ->
+                            movimentiVM.aggiungi(importo, categoriaId, contoId)
+                            vista = vista.copy(sotto = null)
+                        },
+                        modifier = Modifier.fillMaxSize().padding(insets),
+                    )
+                }
+
+                null -> when (corrente.scheda) {
+                    Destinazione.MOVIMENTI -> MovimentiScreen(movimentiVM, snackbar, contenuto)
+                    Destinazione.CONTI -> ContiScreen(contiVM, contenuto)
+                    Destinazione.STATISTICHE -> StatisticheScreen(statisticheVM, contenuto)
+                    Destinazione.IMPOSTAZIONI -> ImpostazioniScreen(
+                        viewModel = impostazioniVM,
+                        snackbar = snackbar,
+                        onApriCategorie = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
+                        onApriRicorrenti = { vista = vista.copy(sotto = Sotto.RICORRENTI) },
+                        modifier = contenuto,
+                    )
+                }
+            }
         }
     }
+}
 
-    if (foglioAperto) {
-        val stato by movimentiVM.stato.collectAsStateWithLifecycle()
-        AggiungiSheet(
-            categorie = stato.categoriePrincipali,
-            tutteLeCategorie = stato.categorie,
-            conti = stato.conti,
-            onChiudi = { foglioAperto = false },
-            onPersonalizza = {
-                foglioAperto = false
-                categorieAperte = true
-            },
-            onSalva = { importo, categoriaId, contoId ->
-                movimentiVM.aggiungi(importo, categoriaId, contoId)
-                foglioAperto = false
-            },
-        )
+/**
+ * Come una schermata sostituisce l'altra.
+ *
+ * Il verso non è decorativo, è l'unica cosa che distingue "sono entrato in qualcosa" da
+ * "mi sono spostato di lato": aprire una sottoschermata la fa arrivare da destra, e
+ * chiuderla la fa uscire da dove era entrata. Fra le schede il verso segue l'ordine
+ * della barra, così la posizione di ciascuna resta coerente col gesto.
+ *
+ * Duecento millisecondi: abbastanza da vedersi, poco da non pesare su un'app che si apre
+ * decine di volte al giorno alla cassa del supermercato.
+ */
+private fun androidx.compose.animation.AnimatedContentTransitionScope<Vista>.transizione(
+    da: Vista,
+    a: Vista,
+): androidx.compose.animation.ContentTransform {
+    val verso = when {
+        da.sotto == null && a.sotto != null -> 1
+        da.sotto != null && a.sotto == null -> -1
+        else -> if (a.scheda.ordinal > da.scheda.ordinal) 1 else -1
     }
+    return (slideInHorizontally(tween(200)) { it * verso / 4 } + fadeIn(tween(200))) togetherWith
+        (slideOutHorizontally(tween(200)) { -it * verso / 4 } + fadeOut(tween(200)))
 }

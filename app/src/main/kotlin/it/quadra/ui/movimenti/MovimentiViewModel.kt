@@ -2,7 +2,7 @@ package it.quadra.ui.movimenti
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import it.quadra.core.budget.Andamento
+import it.quadra.core.ledger.Andamento
 import it.quadra.core.ledger.Ledger
 import it.quadra.core.model.Account
 import it.quadra.core.model.Category
@@ -42,8 +42,8 @@ data class StatoMovimenti(
     val caricato: Boolean = false,
     val striscia: List<GiornoStriscia> = emptyList(),
     val giornoScelto: LocalDate? = null,
-    /** null quando il budget non è stato impostato: la barra semplicemente non c'è. */
-    val andamento: Andamento? = null,
+    /** Speso contro disponibile: c'è sempre, non dipende da niente che l'utente debba impostare. */
+    val andamento: Andamento = Andamento.calcola(Money.ZERO, Money.ZERO),
 ) {
     /** Le giornate da mostrare: tutte, oppure solo quella scelta nella striscia. */
     val giornateVisibili: List<Giornata>
@@ -120,8 +120,8 @@ class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel()
         mese.flatMapLatest { repository.observeMonth(it) },
         repository.observeCategories(),
         repository.observeAccounts(),
-        combine(giorno, repository.observeBudget()) { g, b -> g to b },
-    ) { meseCorrente, movimenti, categorie, conti, (giornoScelto, budget) ->
+        combine(giorno, repository.observeTotals()) { g, t -> g to t },
+    ) { meseCorrente, movimenti, categorie, conti, (giornoScelto, totali) ->
         val giornate = raggruppaPerGiorno(movimenti)
         val speso = Ledger.totalSpent(movimenti)
         StatoMovimenti(
@@ -134,17 +134,12 @@ class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel()
             caricato = true,
             striscia = striscia(meseCorrente, giornate),
             giornoScelto = giornoScelto,
-            andamento = Andamento.calcola(speso, budget, meseCorrente),
+            andamento = Andamento.calcola(speso, totali.available),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatoMovimenti())
 
     fun mesePrecedente() { cambiaMese(mese.value.minusMonths(1)) }
     fun meseSuccessivo() { cambiaMese(mese.value.plusMonths(1)) }
-
-    /** Zero o meno toglie il budget: la barra sparisce invece di restare a zero. */
-    fun salvaBudget(budget: Money) {
-        viewModelScope.launch { repository.salvaBudget(budget) }
-    }
 
     /**
      * Sceglie un giorno, o torna a vedere tutto il mese passando null.

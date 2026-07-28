@@ -292,8 +292,8 @@ class LedgerRepository(private val db: AppDatabase) {
         db.transactions().upsert(documento.movimenti.map { it.toDomain().toEntity() })
         db.recurringRules().upsert(documento.ricorrenti.map { it.toDomain().toEntity() })
 
-        // Le preferenze si sostituiscono solo se il backup ne porta: un backup vecchio
-        // non deve cancellare il budget già impostato su questo telefono.
+        // Le preferenze si sostituiscono solo se il backup ne porta: un backup scritto
+        // da una versione che non le conosceva non deve cancellare quelle di qui.
         if (documento.preferenze.isNotEmpty()) {
             db.impostazioni().deleteAll()
             db.impostazioni().scrivi(
@@ -363,27 +363,4 @@ class LedgerRepository(private val db: AppDatabase) {
         db.recurringRules().delete(regola.toEntity())
     }
 
-    // ───────────────────────────────────────────── preferenze
-
-    /**
-     * Il budget mensile, o zero se non è stato impostato.
-     *
-     * Uno solo, valido per ogni mese, e non uno per mese: chi vuole spendere meno a
-     * dicembre lo sa già, e chiedere di reinserirlo dodici volte l'anno lo farebbe
-     * abbandonare dopo febbraio.
-     */
-    fun observeBudget(): Flow<Money> =
-        db.impostazioni().observe(BUDGET).map { Money(it?.toLongOrNull() ?: 0L) }
-
-    suspend fun salvaBudget(budget: Money) {
-        if (budget.cents <= 0) {
-            db.impostazioni().cancella(BUDGET)
-        } else {
-            db.impostazioni().scrivi(ImpostazioneEntity(BUDGET, budget.cents.toString()))
-        }
-    }
-
-    private companion object {
-        const val BUDGET = "budget.mensile.centesimi"
-    }
 }
