@@ -61,11 +61,14 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 
 private val formatoData = DateTimeFormatter.ofPattern("d MMMM", Locale.ITALIAN)
+private val formatoPartenza = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ITALIAN)
+private val formatoMeseChip = DateTimeFormatter.ofPattern("MMM yy", Locale.ITALIAN)
 
 data class StatoRicorrenti(
     val regole: List<RecurringRule> = emptyList(),
@@ -285,9 +288,10 @@ private fun FoglioRegola(
         mutableStateOf(iniziale?.let { stato.conto(it.accountId) } ?: stato.conti.firstOrNull())
     }
     var cadenza by remember { mutableStateOf(iniziale?.let { it.every to it.unit } ?: (1 to RecurrenceUnit.MONTH)) }
-    var giorno by remember {
-        mutableStateOf(iniziale?.dayOfMonth ?: iniziale?.startDate?.dayOfMonth ?: LocalDate.now().dayOfMonth)
-    }
+    var altraCadenza by remember { mutableStateOf(false) }
+    // La prima scadenza è una data intera, non solo un giorno: senza sapere in quale
+    // mese cade, "ogni 4 mesi" non ha modo di dire quali quattro.
+    var partenza by remember { mutableStateOf(iniziale?.startDate ?: primaScadenzaProposta()) }
 
     ModalBottomSheet(
         onDismissRequest = onChiudi,
@@ -319,23 +323,63 @@ private fun FoglioRegola(
             // `extra` è un getter @Composable e ChipRow chiama `colore` fuori dalla
             // composizione: il colore va letto qui.
             val marchio = extra.brandEnd
+            val nota = CADENZE.firstOrNull { it.every == cadenza.first && it.unit == cadenza.second }
             ChipRow(
                 voci = CADENZE,
-                scelta = CADENZE.firstOrNull { it.every == cadenza.first && it.unit == cadenza.second },
+                scelta = nota,
                 etichetta = { it.etichetta },
                 colore = { marchio },
-                onScelta = { cadenza = it.every to it.unit },
+                onScelta = { cadenza = it.every to it.unit; altraCadenza = false },
             )
-
-            // Il giorno serve solo a chi si ripete a mesi o ad anni: per una regola
-            // settimanale la data di partenza dice già tutto.
-            if (cadenza.second == RecurrenceUnit.MONTH || cadenza.second == RecurrenceUnit.YEAR) {
+            // Le voci fatte coprono i casi veri; per il resto si sceglie il numero di
+            // mesi, che è l'unità in cui sono espresse tutte le scadenze che avanzano.
+            Text(
+                if (nota == null) "Ogni ${cadenza.first} mesi — cambia" else "Un altro intervallo",
+                style = MaterialTheme.typography.bodySmall,
+                color = marchio,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(99.dp))
+                    .clickable { altraCadenza = !altraCadenza }
+                    .padding(vertical = 4.dp),
+            )
+            if (altraCadenza) {
+                GrigliaNumeri(
+                    voci = (1..12).toList(),
+                    scelto = if (cadenza.second == RecurrenceUnit.MONTH) cadenza.first else 0,
+                    etichetta = { "$it" },
+                ) { cadenza = it to RecurrenceUnit.MONTH }
                 Text(
-                    "Il giorno $giorno del mese",
-                    style = MaterialTheme.typography.bodyMedium,
+                    "Ogni quanti mesi.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                GrigliaGiorni(giorno) { giorno = it }
+            }
+
+            // La prima scadenza va scelta per intero. Per una mensile basterebbe il
+            // giorno, ma per una ogni due, quattro o sei mesi il mese di partenza è
+            // proprio l'informazione che decide in quali mesi cadrà da lì in avanti.
+            Text(
+                "Prima scadenza: ${partenza.format(formatoPartenza)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val mesi = remember { mesiProponibili() }
+            ChipRow(
+                voci = mesi,
+                scelta = mesi.firstOrNull { it == YearMonth.from(partenza) },
+                etichetta = { it.format(formatoMeseChip).replaceFirstChar(Char::uppercase) },
+                colore = { marchio },
+                onScelta = { mese -> partenza = mese.atDay(minOf(partenza.dayOfMonth, mese.lengthOfMonth())) },
+            )
+            GrigliaNumeri(
+                voci = (1..31).toList(),
+                scelto = partenza.dayOfMonth,
+                etichetta = { "$it" },
+            ) { giorno ->
+                val mese = YearMonth.from(partenza)
+                partenza = mese.atDay(minOf(giorno, mese.lengthOfMonth()))
+            }
+            if (cadenza.second == RecurrenceUnit.MONTH || cadenza.second == RecurrenceUnit.YEAR) {
                 Text(
                     "Nei mesi più corti scala all'ultimo giorno disponibile.",
                     style = MaterialTheme.typography.bodySmall,
@@ -375,6 +419,8 @@ private fun FoglioRegola(
                 val a = conto ?: return@Azione
                 val mensile = cadenza.second == RecurrenceUnit.MONTH ||
                     cadenza.second == RecurrenceUnit.YEAR
+                // Il giorno preferito serve solo alle cadenze a mesi, per non scivolare
+                // al 28 per sempre dopo un febbraio.
                 onSalva(
                     RecurringRule(
                         id = iniziale?.id ?: UUID.randomUUID().toString(),
@@ -385,8 +431,8 @@ private fun FoglioRegola(
                         accountId = a.id,
                         every = cadenza.first,
                         unit = cadenza.second,
-                        startDate = iniziale?.startDate ?: partenza(giorno, mensile),
-                        dayOfMonth = if (mensile) giorno else null,
+                        startDate = partenza,
+                        dayOfMonth = if (mensile) partenza.dayOfMonth else null,
                         // Salti e rinvii già decisi restano: correggere l'importo non è
                         // chiedere di far riapparire ciò che si è messo da parte.
                         skippedDates = iniziale?.skippedDates.orEmpty(),
@@ -408,29 +454,6 @@ private fun FoglioRegola(
     }
 }
 
-/** I giorni del mese, per scegliere quando cade. */
-@Composable
-private fun GrigliaGiorni(scelto: Int, onScegli: (Int) -> Unit) {
-    val acceso = extra.brandEnd
-    GrigliaFissa(voci = (1..31).toList(), colonne = 7) { numero ->
-        val attivo = numero == scelto
-        Text(
-            numero.toString(),
-            style = MaterialTheme.typography.bodyMedium.tabular,
-            textAlign = TextAlign.Center,
-            color = if (attivo) acceso else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(11.dp))
-                .background(
-                    if (attivo) acceso.copy(alpha = 0.20f)
-                    else MaterialTheme.colorScheme.surfaceVariant
-                )
-                .clickable { onScegli(numero) }
-                .padding(vertical = 9.dp),
-        )
-    }
-}
 
 @Composable
 private fun Vuoto() {
@@ -459,37 +482,73 @@ private data class Cadenza(val every: Int, val unit: RecurrenceUnit, val etichet
 /**
  * Le cadenze reali di una casa italiana.
  *
- * Sono voci fatte invece di due campi "ogni N" e "unità": scegliere fra sei etichette è
- * un tocco, comporre un numero e un'unità sono tre più il dubbio se il gas bimestrale
- * sia "ogni 2 mesi" o "ogni 60 giorni".
+ * Sono voci fatte invece di due campi "ogni N" e "unità": scegliere un'etichetta è un
+ * tocco, comporre un numero e un'unità sono tre più il dubbio se il gas bimestrale sia
+ * "ogni 2 mesi" o "ogni 60 giorni". Il quadrimestre c'è perché l'assicurazione auto si
+ * paga spesso in tre rate all'anno, ed è il tipo di scadenza che nessuno ricorda a mente.
+ *
+ * Quello che non è in elenco si compone comunque, in mesi.
  */
 private val CADENZE = listOf(
     Cadenza(1, RecurrenceUnit.MONTH, "Ogni mese"),
     Cadenza(2, RecurrenceUnit.MONTH, "Ogni 2 mesi"),
     Cadenza(3, RecurrenceUnit.MONTH, "Ogni 3 mesi"),
+    Cadenza(4, RecurrenceUnit.MONTH, "Ogni 4 mesi"),
     Cadenza(6, RecurrenceUnit.MONTH, "Ogni 6 mesi"),
     Cadenza(1, RecurrenceUnit.YEAR, "Ogni anno"),
     Cadenza(1, RecurrenceUnit.WEEK, "Ogni settimana"),
+    Cadenza(2, RecurrenceUnit.WEEK, "Ogni 2 settimane"),
 )
 
 private fun cadenza(regola: RecurringRule): String =
     CADENZE.firstOrNull { it.every == regola.every && it.unit == regola.unit }?.etichetta
-        ?: "Ogni ${regola.every} ${regola.unit.name.lowercase()}"
+        ?: when (regola.unit) {
+            RecurrenceUnit.DAY -> "Ogni ${regola.every} giorni"
+            RecurrenceUnit.WEEK -> "Ogni ${regola.every} settimane"
+            RecurrenceUnit.MONTH -> "Ogni ${regola.every} mesi"
+            RecurrenceUnit.YEAR -> "Ogni ${regola.every} anni"
+        }
 
 /**
- * Da quando far partire una regola nuova.
+ * La prima scadenza proposta per una regola nuova: fra un mese, stesso giorno.
  *
- * Dal prossimo giorno utile e non da oggi: chi crea la ricorrente dell'affitto il 20 non
- * vuole vedersi comparire l'affitto del mese in corso, che ha già pagato.
+ * Non oggi: chi sta creando la ricorrente dell'affitto oggi lo ha quasi sempre appena
+ * pagato, e trovarsi subito una conferma da dare sarebbe un promemoria per qualcosa che
+ * è già fatto. Resta comunque una proposta, e si sposta con due tocchi.
  */
-private fun partenza(giorno: Int, mensile: Boolean): LocalDate {
-    val oggi = LocalDate.now()
-    if (!mensile) return oggi
-    val questoMese = oggi.withDayOfMonth(minOf(giorno, oggi.lengthOfMonth()))
-    return if (questoMese.isAfter(oggi)) {
-        questoMese
-    } else {
-        val prossimo = oggi.plusMonths(1)
-        prossimo.withDayOfMonth(minOf(giorno, prossimo.lengthOfMonth()))
+private fun primaScadenzaProposta(): LocalDate = LocalDate.now().plusMonths(1)
+
+/** I mesi fra cui scegliere la partenza: da quello scorso a un anno avanti. */
+private fun mesiProponibili(): List<YearMonth> {
+    val da = YearMonth.now().minusMonths(1)
+    return (0L..13L).map { da.plusMonths(it) }
+}
+
+/** Griglia di numeri a sette colonne: i giorni del mese, i mesi di intervallo. */
+@Composable
+private fun GrigliaNumeri(
+    voci: List<Int>,
+    scelto: Int,
+    etichetta: (Int) -> String,
+    onScegli: (Int) -> Unit,
+) {
+    val acceso = extra.brandEnd
+    GrigliaFissa(voci = voci, colonne = 7) { numero ->
+        val attivo = numero == scelto
+        Text(
+            etichetta(numero),
+            style = MaterialTheme.typography.bodyMedium.tabular,
+            textAlign = TextAlign.Center,
+            color = if (attivo) acceso else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(11.dp))
+                .background(
+                    if (attivo) acceso.copy(alpha = 0.20f)
+                    else MaterialTheme.colorScheme.surfaceVariant
+                )
+                .clickable { onScegli(numero) }
+                .padding(vertical = 9.dp),
+        )
     }
 }

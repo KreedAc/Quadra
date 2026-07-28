@@ -176,10 +176,44 @@ def controlla(sorgenti, note):
     return problemi
 
 
+def privati_fuori_posto(sorgenti):
+    """Composable privati chiamati da un file che non è quello che li dichiara.
+
+    Kotlin li nasconde al resto del progetto, ma il nome esiste e il controllo delle
+    firme lo riconosce lo stesso: senza questo, una chiamata sbagliata passa i controlli
+    e si scopre solo in compilazione.
+    """
+    dichiarati = {}
+    pubblici = set()
+    for f in sorgenti:
+        testo = senza_commenti(f.read_text(encoding="utf-8"))
+        for m in re.finditer(r"^(private )?fun\s+(?:<[^>]*>\s+)?([A-Z]\w*)\s*\(", testo, re.M):
+            if m.group(1):
+                dichiarati.setdefault(m.group(2), set()).add(f.name)
+            else:
+                pubblici.add(m.group(2))
+
+    problemi = []
+    for f in sorgenti:
+        testo = senza_stringhe(senza_commenti(f.read_text(encoding="utf-8")))
+        for nome, dove in dichiarati.items():
+            if nome in pubblici or f.name in dove:
+                continue
+            m = re.search(r"(?<![\w.])" + nome + r"\s*\(", testo)
+            if m:
+                riga = testo.count("\n", 0, m.start()) + 1
+                problemi.append(
+                    f"{f.name}:{riga} chiama {nome}(), che è privata in {', '.join(sorted(dove))}"
+                )
+    return problemi
+
+
 def main():
     sorgenti = sorted((RADICE / "app/src/main/kotlin").rglob("*.kt"))
     note = firme(sorgenti)
     problemi = controlla(sorgenti, note)
+
+    problemi += privati_fuori_posto(sorgenti)
 
     tutti = sorgenti + sorted((RADICE / "core/src").rglob("*.kt"))
     for f in tutti:

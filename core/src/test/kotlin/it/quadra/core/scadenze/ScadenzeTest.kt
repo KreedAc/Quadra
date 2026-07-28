@@ -99,6 +99,51 @@ class ScadenzeTest {
         assertTrue(Scadenze.daConfermare(listOf(regola(attiva = false)), emptySet(), oggi).isEmpty())
     }
 
+    @Test
+    fun `l'assicurazione ogni quattro mesi cade nei mesi giusti`() {
+        // Il caso vero: tre rate all'anno, e quali tre dipende da quando parte la prima.
+        // Senza poter scegliere il mese di partenza, "ogni 4 mesi" non direbbe quali.
+        val assicurazione = regola(
+            id = "assic", descrizione = "Assicurazione auto",
+            inizio = "2026-03-12", ogni = 4, giorno = 12,
+        )
+        val entroUnAnno = Scadenze.daConfermare(
+            listOf(assicurazione), emptySet(), LocalDate.parse("2027-03-11"),
+        )
+        assertEquals(
+            listOf("2026-03-12", "2026-07-12", "2026-11-12", "2027-03-12").dropLast(1).map(LocalDate::parse),
+            entroUnAnno.map { it.occorrenza },
+        )
+    }
+
+    @Test
+    fun `partire da un mese diverso sposta tutte le scadenze`() {
+        val aprile = regola(id = "a", inizio = "2026-04-12", ogni = 4, giorno = 12)
+        val maggio = regola(id = "m", inizio = "2026-05-12", ogni = 4, giorno = 12)
+        val fine = LocalDate.parse("2026-12-31")
+        assertEquals(
+            listOf("2026-04-12", "2026-08-12", "2026-12-12").map(LocalDate::parse),
+            Scadenze.daConfermare(listOf(aprile), emptySet(), fine).map { it.occorrenza },
+        )
+        assertEquals(
+            listOf("2026-05-12", "2026-09-12").map(LocalDate::parse),
+            Scadenze.daConfermare(listOf(maggio), emptySet(), fine).map { it.occorrenza },
+        )
+    }
+
+    @Test
+    fun `una scadenza a quattro mesi partita dal 31 non scivola`() {
+        // Il 31 luglio esiste, il 30 novembre no: la regola torna al 31 a marzo invece
+        // di restare inchiodata al 30 per sempre.
+        val r = regola(inizio = "2026-07-31", ogni = 4, giorno = 31)
+        val date = Scadenze.daConfermare(listOf(r), emptySet(), LocalDate.parse("2027-04-01"))
+            .map { it.occorrenza }
+        assertEquals(
+            listOf("2026-07-31", "2026-11-30", "2027-03-31").map(LocalDate::parse),
+            date,
+        )
+    }
+
     // ------------------------------------------------------------- rinvii
 
     @Test
