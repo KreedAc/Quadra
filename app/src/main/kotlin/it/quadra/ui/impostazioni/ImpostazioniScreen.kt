@@ -188,15 +188,6 @@ fun ImpostazioniScreen(
         }
 
         item {
-            SchedaTesto(
-                titolo = "In arrivo",
-                righe = listOf(
-                    "Importazione dei movimenti dall'estratto conto della banca.",
-                ),
-            )
-        }
-
-        item {
             Text(
                 // Letta dalla build e non scritta a mano: era ferma alla 0.1.0 mentre
                 // l'app era andata avanti, ed è il tipo di bugia che nessuno rilegge.
