@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import it.quadra.BuildConfig
 import it.quadra.ui.Icone
 import it.quadra.ui.theme.Tema
 import it.quadra.ui.theme.extra
@@ -156,8 +157,8 @@ fun ImpostazioniScreen(
                 titolo = "I tuoi dati restano qui",
                 righe = listOf(
                     "Quadra non ha registrazione, non ha account e non ha un server. " +
-                        "Tutto quello che scrivi resta sul telefono, e non esiste nessun " +
-                        "posto dove potrebbe arrivare.",
+                        "Non esiste nessun posto nostro dove i tuoi dati possano " +
+                        "arrivare, perché non esiste nessun posto nostro.",
                     "L'app non chiede nemmeno un permesso: né rete, né notifiche, né " +
                         "contatti. Puoi verificarlo tu stesso nelle informazioni " +
                         "dell'app, alla voce autorizzazioni.",
@@ -166,17 +167,40 @@ fun ImpostazioniScreen(
         }
 
         item {
+            // Detto qui e non taciuto. Il backup automatico di Android è una rete di
+            // sicurezza vera — ti fa ritrovare le spese cambiando telefono senza aver
+            // fatto niente — ma è anche l'unico caso in cui l'archivio lascia il
+            // telefono. Scrivere "non esiste nessun posto dove potrebbe arrivare" e poi
+            // lasciarlo acceso sarebbe stato falso, e su un'app che vende esattamente
+            // questo, una riga falsa vale più di tutte le altre messe insieme.
+            SchedaTesto(
+                titolo = "Una cosa che non dipende da noi",
+                righe = listOf(
+                    "Android ha un backup automatico suo, e Quadra lo lascia acceso: il " +
+                        "sistema può copiare l'archivio nel tuo account Google, cifrato " +
+                        "con il codice di blocco del telefono. È quello che ti fa " +
+                        "ritrovare tutto quando cambi telefono senza aver fatto niente.",
+                    "Non passa da noi e non possiamo leggerlo. Ma è l'unico caso in cui " +
+                        "i tuoi dati escono da qui, quindi è giusto che tu lo sappia: si " +
+                        "spegne dalle impostazioni di Android, alla voce backup.",
+                ),
+            )
+        }
+
+        item {
             SchedaTesto(
                 titolo = "In arrivo",
                 righe = listOf(
-                    "Modifica dei movimenti e importazione dei movimenti dalla banca.",
+                    "Importazione dei movimenti dall'estratto conto della banca.",
                 ),
             )
         }
 
         item {
             Text(
-                "Quadra 0.1.0 — versione di sviluppo",
+                // Letta dalla build e non scritta a mano: era ferma alla 0.1.0 mentre
+                // l'app era andata avanti, ed è il tipo di bugia che nessuno rilegge.
+                "Quadra ${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

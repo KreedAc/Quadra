@@ -16,3 +16,6 @@ captures/
 # Cache di Python degli script di controllo
 __pycache__/
 *.pyc
+
+# La chiave di firma e le sue password non entrano nel repository
+keystore.properties

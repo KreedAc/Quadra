@@ -1,8 +1,25 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+}
+
+/**
+ * La chiave di firma sta fuori dal repository.
+ *
+ * `keystore.properties` è ignorato da git, e la chiave vera va tenuta anche fuori dal
+ * computer: perderla significa non poter più aggiornare l'app pubblicata, e nessun
+ * backup del codice la rimette al suo posto.
+ *
+ * Se il file non c'è la build di release resta non firmata invece di fallire: chi clona
+ * il progetto deve poterlo compilare senza avere le chiavi di nessuno.
+ */
+val fileChiavi = rootProject.file("keystore.properties")
+val chiavi = Properties().apply {
+    if (fileChiavi.exists()) fileChiavi.inputStream().use { load(it) }
 }
 
 android {
@@ -16,11 +33,25 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
+    }
+
+    signingConfigs {
+        if (fileChiavi.exists()) {
+            create("release") {
+                storeFile = rootProject.file(chiavi.getProperty("storeFile"))
+                storePassword = chiavi.getProperty("storePassword")
+                keyAlias = chiavi.getProperty("keyAlias")
+                keyPassword = chiavi.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
+            if (fileChiavi.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -40,6 +71,9 @@ android {
 
     buildFeatures {
         compose = true
+        // Serve solo a mostrare il numero di versione nelle impostazioni leggendolo da
+        // qui, invece di riscriverlo a mano in un punto che poi nessuno aggiorna.
+        buildConfig = true
     }
 
     packaging {
