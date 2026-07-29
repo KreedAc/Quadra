@@ -190,15 +190,21 @@ fun ScadenzaSheet(
     }
 }
 
-private fun scadenzaDetta(scadenza: Scadenza): String = when {
-    // Il rinvio viene prima di tutto: è la risposta che l'utente ha già dato, e sapere
-    // quando tornerà conta più di sapere da quanto è scaduta.
-    scadenza.rimandataAl != null -> "Te lo richiedo il ${scadenza.rimandataAl.format(formatoScadenza)}"
-    scadenza.giorniDiRitardo == 0 -> "Scade oggi"
-    scadenza.giorniDiRitardo == 1 -> "Scaduta ieri"
-    scadenza.giorniDiRitardo > 1 -> "Scaduta il ${scadenza.occorrenza.format(formatoScadenza)}"
-    scadenza.giorniDiRitardo == -1 -> "Domani"
-    else -> "In arrivo il ${scadenza.occorrenza.format(formatoScadenza)}"
+private fun scadenzaDetta(scadenza: Scadenza): String {
+    // Legata a una variabile locale e non letta due volte: il valore arriva da :core, e
+    // Kotlin non restringe il tipo di una proprietà pubblica di un altro modulo perché
+    // non può garantire che fra il controllo e l'uso resti la stessa.
+    val rinviata = scadenza.rimandataAl
+    return when {
+        // Il rinvio viene prima di tutto: è la risposta che l'utente ha già dato, e
+        // sapere quando tornerà conta più di sapere da quanto è scaduta.
+        rinviata != null -> "Te lo richiedo il ${rinviata.format(formatoScadenza)}"
+        scadenza.giorniDiRitardo == 0 -> "Scade oggi"
+        scadenza.giorniDiRitardo == 1 -> "Scaduta ieri"
+        scadenza.giorniDiRitardo > 1 -> "Scaduta il ${scadenza.occorrenza.format(formatoScadenza)}"
+        scadenza.giorniDiRitardo == -1 -> "Domani"
+        else -> "In arrivo il ${scadenza.occorrenza.format(formatoScadenza)}"
+    }
 }
 
 /**

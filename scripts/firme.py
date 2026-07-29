@@ -208,12 +208,45 @@ def privati_fuori_posto(sorgenti):
     return problemi
 
 
+def smart_cast_impossibili(sorgenti):
+    """`x.tizio != null` seguito da `x.tizio.caio()` sulla stessa proprietà.
+
+    Kotlin non restringe il tipo di una proprietà pubblica dichiarata in un altro
+    modulo: non può garantire che fra il controllo di nullità e l'uso resti la stessa.
+    Quindi questa forma compila dentro :core e non compila da :app, che è esattamente
+    la differenza che qui non si vede.
+
+    Si guarda la forma e non i tipi: cercare i nomi delle proprietà nullabili di :core
+    segnalava anche `partenza.dayOfMonth`, che è un LocalDate e non c'entra niente.
+    La cura è sempre la stessa: legare a una variabile locale e usare quella.
+    """
+    problemi = []
+    for f in sorgenti:
+        # Le stringhe restano: l'uso incriminato sta quasi sempre dentro
+        # un'interpolazione, e svuotarle nasconderebbe proprio il caso da trovare.
+        testo = senza_commenti(f.read_text(encoding="utf-8"))
+        for m in re.finditer(r"(\w+)\.(\w+)\s*!=\s*null", testo):
+            ricevente, proprieta = m.group(1), m.group(2)
+            # La finestra copre il ramo di un `when` o il corpo di un `if` breve:
+            # oltre, il controllo di nullità non governa più l'espressione.
+            finestra = testo[m.end():m.end() + 400]
+            if re.search(re.escape(f"{ricevente}.{proprieta}") + r"\.\w", finestra):
+                riga = testo.count("\n", 0, m.start()) + 1
+                problemi.append(
+                    f"{f.name}:{riga} controlla '{ricevente}.{proprieta} != null' e poi "
+                    f"lo usa col punto secco — lo smart cast non attraversa i moduli, "
+                    f"legalo a una variabile"
+                )
+    return problemi
+
+
 def main():
     sorgenti = sorted((RADICE / "app/src/main/kotlin").rglob("*.kt"))
     note = firme(sorgenti)
     problemi = controlla(sorgenti, note)
 
     problemi += privati_fuori_posto(sorgenti)
+    problemi += smart_cast_impossibili(sorgenti)
 
     tutti = sorgenti + sorted((RADICE / "core/src").rglob("*.kt"))
     for f in tutti:
