@@ -56,6 +56,7 @@ import it.quadra.ui.common.ImportoGrande
 import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
+import it.quadra.ui.theme.tinta
 
 /**
  * L'inserimento in due tocchi, a schermo intero.
@@ -233,7 +234,7 @@ private fun CasellaMatita(altezza: Dp, onClick: () -> Unit) {
  */
 @Composable
 private fun Casella(categoria: Category, altezza: Dp, onClick: () -> Unit) {
-    val colore = Color(categoria.colorArgb)
+    val colore = tinta(categoria.colorArgb)
     Corpo(altezza = altezza, sfondo = colore.copy(alpha = 0.13f), onClick = onClick) {
         Pastiglia(colore.copy(alpha = 0.22f)) {
             Icon(iconFor(categoria.icon), contentDescription = null, tint = colore, modifier = Modifier.size(21.dp))
@@ -294,7 +295,7 @@ private fun PassoImporto(
     onCambiaCategoria: () -> Unit,
     onSalva: (Money, String, String) -> Unit,
 ) {
-    val colore = Color(categoria.colorArgb)
+    val colore = tinta(categoria.colorArgb)
     var digitato by remember { mutableStateOf(Digitazione()) }
     var sottoscelta by remember { mutableStateOf<Category?>(null) }
     var conto by remember { mutableStateOf(conti.firstOrNull()) }
@@ -383,7 +384,7 @@ private fun PassoImporto(
                         modifier = Modifier
                             .clip(RoundedCornerShape(99.dp))
                             .background(
-                                if (attivo) Color(c.colorArgb).copy(alpha = 0.22f)
+                                if (attivo) tinta(c.colorArgb).copy(alpha = 0.22f)
                                 else MaterialTheme.colorScheme.surfaceVariant
                             )
                             .clickable { conto = c }

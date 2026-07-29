@@ -44,6 +44,7 @@ import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
+import it.quadra.ui.theme.tinta
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -81,7 +82,7 @@ fun ScadenzaSheet(
         mutableStateOf(Digitazione.da(scadenza.regola.amount))
     }
     var rinvio by remember(scadenza.chiave) { mutableStateOf(false) }
-    val colore = categoria?.let { Color(it.colorArgb) } ?: extra.brandEnd
+    val colore = categoria?.let { tinta(it.colorArgb) } ?: extra.brandEnd
 
     ModalBottomSheet(
         onDismissRequest = onChiudi,
@@ -226,7 +227,7 @@ fun CardScadenza(
     onClick: () -> Unit,
 ) {
     val inRitardo = scadenza.inRitardo
-    val colore = categoria?.let { Color(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val colore = categoria?.let { tinta(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
     val accento = if (inRitardo) MaterialTheme.colorScheme.error else colore
     Column(
         modifier = Modifier

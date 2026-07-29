@@ -57,6 +57,7 @@ import it.quadra.ui.ricorrenti.CardScadenza
 import it.quadra.ui.ricorrenti.ScadenzaSheet
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
+import it.quadra.ui.theme.tinta
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -430,7 +431,7 @@ private fun RigaMovimento(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val colore = categoria?.let { Color(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val colore = categoria?.let { tinta(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         modifier
             .fillMaxWidth()

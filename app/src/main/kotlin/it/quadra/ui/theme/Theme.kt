@@ -13,6 +13,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -110,6 +111,8 @@ data class ColoriExtra(
     val brandStart: Color,
     val brandEnd: Color,
     val onBrand: Color,
+    /** Serve a [tinta]: i colori dell'utente vanno letti diversamente sui due fondi. */
+    val scuro: Boolean,
 )
 
 val LocalColoriExtra = staticCompositionLocalOf {
@@ -119,8 +122,31 @@ val LocalColoriExtra = staticCompositionLocalOf {
         brandStart = Blu,
         brandEnd = Verde,
         onBrand = Color(0xFF04121A),
+        scuro = true,
     )
 }
+
+/**
+ * Un colore scelto dall'utente, letto sul tema corrente.
+ *
+ * La tavolozza è tarata sul fondo scuro: sono tinte medie, che sul blu notte hanno il
+ * peso giusto. Le stesse su una scheda bianca si sgonfiano, e si sgonfia soprattutto
+ * l'icona — che sta dentro una pastiglia fatta con la sua stessa tinta annacquata, cioè
+ * colore chiaro sopra colore chiarissimo. Sul chiaro le porto giù di un passo: quel
+ * tanto che stacca l'inchiostro dal suo fondo, senza che il verde smetta di essere il
+ * verde che l'utente ha scelto.
+ *
+ * Un passo solo, e verso il blu di notte invece che verso il nero: schiacciarle di più
+ * le farebbe virare tutte allo stesso fango, che è il modo più veloce per rendere le
+ * categorie indistinguibili proprio dove servono a distinguere.
+ */
+@Composable
+fun tinta(colore: Color): Color = if (extra.scuro) colore else lerp(colore, Notte, 0.22f)
+
+@Composable
+fun tinta(argb: Int): Color = tinta(Color(argb))
+
+private val Notte = Color(0xFF0A1119)
 
 /**
  * Chiaro, scuro, o quello che dice il telefono.
@@ -217,6 +243,7 @@ fun QuadraTheme(
         brandStart = if (scuro) Blu else BluChiaro,
         brandEnd = if (scuro) Verde else VerdeChiaro,
         onBrand = Color(0xFF04121A),
+        scuro = scuro,
     )
     CompositionLocalProvider(LocalColoriExtra provides extraColori) {
         MaterialTheme(

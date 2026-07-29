@@ -5,8 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -60,6 +62,7 @@ import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
+import it.quadra.ui.theme.tinta
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -304,7 +307,7 @@ private fun Sezione(titolo: String, totale: Money) {
 
 @Composable
 private fun RigaConto(conto: Account, saldo: Money, ultimo: Boolean, onClick: () -> Unit) {
-    val colore = Color(conto.colorArgb)
+    val colore = tinta(conto.colorArgb)
     Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 11.dp),
@@ -404,7 +407,7 @@ private fun FoglioConto(
 
 @Composable
 private fun Intestazione(conto: Account, saldo: Money) {
-    val colore = Color(conto.colorArgb)
+    val colore = tinta(conto.colorArgb)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -457,7 +460,14 @@ private fun Azioni(
     onAllinea: () -> Unit,
     onModifica: () -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
+    // `IntrinsicSize.Min` misura la più alta delle due e dà quell'altezza a entrambe.
+    // Senza, ciascuna si tiene la propria: "Stipendio, rimborso, regalo" va a capo e
+    // "Sposta su un altro conto" no, quindi una tessera cresce e l'altra resta corta —
+    // due riquadri affiancati di altezza diversa, che è la prima cosa che si nota.
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(9.dp),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+    ) {
         Tessera(
             icona = Icone.Su,
             titolo = "Entrata",
@@ -467,12 +477,16 @@ private fun Azioni(
             modifier = Modifier.weight(1f),
             onClick = onEntrata,
         )
+        // Blu e non verde: il verde delle entrate e il verde del marchio finivano a due
+        // dita di distanza e sembravano la stessa azione ripetuta. Un trasferimento non
+        // è un'entrata — i soldi che sposti li avevi già — e i due colori devono dirlo
+        // prima che lo dica l'etichetta.
         Tessera(
             icona = Icone.Scambio,
             titolo = "Trasferisci",
             sottotitolo = if (trasferibile) "Sposta su un altro conto"
             else "Serve almeno un altro conto",
-            colore = extra.brandEnd,
+            colore = extra.brandStart,
             abilitata = trasferibile,
             modifier = Modifier.weight(1f),
             onClick = onTrasferisci,
@@ -482,7 +496,7 @@ private fun Azioni(
         icona = Icone.Spunta,
         titolo = "Allinea il saldo",
         sottotitolo = "Se la banca dice un altro numero, la differenza diventa un movimento",
-        colore = extra.brandStart,
+        colore = MaterialTheme.colorScheme.onSurfaceVariant,
         onClick = onAllinea,
     )
     RigaAzione(
@@ -504,9 +518,11 @@ private fun Tessera(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val tinta = if (abilitata) colore else MaterialTheme.colorScheme.onSurfaceVariant
+    val accento = if (abilitata) colore else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         modifier = modifier
+            // Riempie l'altezza decisa dalla riga, che è quella della tessera più alta.
+            .fillMaxHeight()
             .clip(RoundedCornerShape(18.dp))
             .background(
                 if (abilitata) colore.copy(alpha = 0.13f)
@@ -520,10 +536,10 @@ private fun Tessera(
             modifier = Modifier
                 .size(36.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(tinta.copy(alpha = if (abilitata) 0.22f else 0.12f)),
+                .background(accento.copy(alpha = if (abilitata) 0.22f else 0.12f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icona, contentDescription = null, tint = tinta, modifier = Modifier.size(19.dp))
+            Icon(icona, contentDescription = null, tint = accento, modifier = Modifier.size(19.dp))
         }
         Text(
             titolo,

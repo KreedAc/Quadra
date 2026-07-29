@@ -52,6 +52,7 @@ import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
+import it.quadra.ui.theme.tinta
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -153,7 +154,7 @@ fun DettaglioSheet(
                             Pillola(
                                 testo = sotto.name,
                                 attiva = categoria?.id == sotto.id,
-                                colore = Color(sotto.colorArgb),
+                                colore = tinta(sotto.colorArgb),
                             ) { categoria = sotto }
                         }
                     }
@@ -206,7 +207,7 @@ private fun Intestazione(
     icona: String?,
     importo: Money,
 ) {
-    val colore = categoria?.let { Color(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val colore = categoria?.let { tinta(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         Modifier.fillMaxWidth().padding(bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -289,7 +290,7 @@ private fun Pannello(visibile: Boolean, contenuto: @Composable () -> Unit) {
 
 @Composable
 private fun Casella(categoria: Category, attiva: Boolean, onClick: () -> Unit) {
-    val colore = Color(categoria.colorArgb)
+    val colore = tinta(categoria.colorArgb)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(5.dp),

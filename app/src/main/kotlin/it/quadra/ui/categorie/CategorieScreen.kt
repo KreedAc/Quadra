@@ -52,6 +52,7 @@ import it.quadra.ui.common.SceltaIcona
 import it.quadra.ui.common.TAVOLOZZA
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
+import it.quadra.ui.theme.tinta
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -241,7 +242,7 @@ private fun BloccoCategoria(
     onAggiungiSotto: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colore = Color(categoria.colorArgb)
+    val colore = tinta(categoria.colorArgb)
     val rotazione by animateFloatAsState(if (aperta) 90f else 0f, label = "freccia")
     Column(
         modifier = modifier

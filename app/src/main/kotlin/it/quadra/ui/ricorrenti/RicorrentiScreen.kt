@@ -55,6 +55,7 @@ import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
+import it.quadra.ui.theme.tinta
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -212,7 +213,7 @@ private fun RigaRegola(
     ultima: Boolean,
     onClick: () -> Unit,
 ) {
-    val colore = categoria?.let { Color(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val colore = categoria?.let { tinta(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
     Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 11.dp),

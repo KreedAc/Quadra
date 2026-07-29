@@ -38,6 +38,7 @@ import it.quadra.ui.Icone
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
+import it.quadra.ui.theme.tinta
 
 /**
  * I pezzi di interfaccia che ricorrono nei fogli: tastierino, campo di testo, scelta
@@ -367,6 +368,10 @@ fun <T> ChipRow(
     LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
         items(voci) { voce ->
             val attiva = voce == scelta
+            // L'adattamento al tema avviene qui e non nella lambda: `colore` è una
+            // funzione normale, chiamata da chi non è in composizione, e `tinta` ha
+            // bisogno del tema. Chi passa il colore non deve saperlo.
+            val tinto = tinta(colore(voce))
             Text(
                 etichetta(voce),
                 style = MaterialTheme.typography.bodySmall,
@@ -375,7 +380,7 @@ fun <T> ChipRow(
                 modifier = Modifier
                     .clip(RoundedCornerShape(99.dp))
                     .background(
-                        if (attiva) colore(voce).copy(alpha = 0.24f)
+                        if (attiva) tinto.copy(alpha = 0.24f)
                         else MaterialTheme.colorScheme.surfaceVariant
                     )
                     .clickable { onScelta(voce) }

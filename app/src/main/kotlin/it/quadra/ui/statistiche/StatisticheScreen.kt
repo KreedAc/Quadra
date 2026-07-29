@@ -38,6 +38,7 @@ import it.quadra.core.statistics.Statistics
 import it.quadra.data.LedgerRepository
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
+import it.quadra.ui.theme.tinta
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -300,7 +301,7 @@ private fun GraficoMensile(stato: StatoStatistiche) {
 
 @Composable
 private fun RigaCategoria(voce: CategoryTotal, categoria: Category?) {
-    val colore = categoria?.let { Color(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val colore = categoria?.let { tinta(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
