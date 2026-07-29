@@ -54,6 +54,8 @@ data class StatoStatistiche(
     val mediaGiornaliera: Money = Money.ZERO,
     val perMese: List<MonthTotal> = emptyList(),
     val perCategoria: List<CategoryTotal> = emptyList(),
+    val entrato: Money = Money.ZERO,
+    val entratePerVoce: List<CategoryTotal> = emptyList(),
     val categorie: List<Category> = emptyList(),
 ) {
     fun categoria(id: String): Category? = categorie.firstOrNull { it.id == id }
@@ -79,6 +81,8 @@ class StatisticheViewModel(repository: LedgerRepository) : ViewModel() {
             mediaGiornaliera = Statistics.dailyAverage(movimenti, mese),
             perMese = Statistics.monthlySpending(movimenti, Statistics.lastMonths(mese, 6)),
             perCategoria = Statistics.byRootCategory(delMese, radice),
+            entrato = Statistics.totalIncome(delMese),
+            entratePerVoce = Statistics.incomeByCategory(delMese),
             categorie = categorie,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatoStatistiche())
@@ -108,6 +112,10 @@ fun StatisticheScreen(viewModel: StatisticheViewModel, modifier: Modifier = Modi
         }
 
         item { Riepilogo(stato) }
+
+        if (stato.entratePerVoce.isNotEmpty()) {
+            item { Entrate(stato) }
+        }
 
         if (stato.perMese.isNotEmpty()) {
             item { GraficoMensile(stato) }
@@ -170,6 +178,78 @@ private fun Riepilogo(stato: StatoStatistiche) {
 }
 
 /** Sei mesi, con quello corrente in evidenza. Serie unica, quindi nessuna legenda. */
+/**
+ * Le entrate del mese, per voce e in totale.
+ *
+ * Stanno in un riquadro loro e non mescolate alle spese: uno stipendio e un affitto non
+ * appartengono alla stessa classifica, e sommarli produrrebbe una percentuale che non
+ * risponde a nessuna domanda. Chi ha più fonti — stipendio, sussidio, lavoro autonomo —
+ * la somma del mese la deve leggere, non ricavare a mente da tre righe sparse.
+ */
+@Composable
+private fun Entrate(stato: StatoStatistiche) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(20.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Entrate del mese",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                stato.entrato.format(),
+                style = MaterialTheme.typography.titleLarge.tabular,
+                color = extra.income,
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+        // Una riga per voce, con la quota sul totale: la barra dice a colpo d'occhio
+        // quanto pesa lo stipendio rispetto al resto, il numero dice quanto è.
+        stato.entratePerVoce.forEachIndexed { indice, voce ->
+            if (indice > 0) Spacer(Modifier.height(12.dp))
+            val categoria = stato.categoria(voce.categoryId)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    categoria?.name ?: voce.categoryId,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    voce.total.format(),
+                    style = MaterialTheme.typography.bodyMedium.tabular,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(voce.share.toFloat().coerceIn(0f, 1f))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(extra.income),
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun GraficoMensile(stato: StatoStatistiche) {
     val massimo = stato.massimoMensile.coerceAtLeast(1L)

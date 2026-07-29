@@ -330,7 +330,7 @@ private fun PassoImporto(
         Tastierino(digitato) { digitato = it }
 
         val contoScelto = conto
-        val abilitato = !importo.isZero && contoScelto != null
+        val abilitato = digitato.valido && contoScelto != null
         Box(
             modifier = Modifier
                 .fillMaxWidth()

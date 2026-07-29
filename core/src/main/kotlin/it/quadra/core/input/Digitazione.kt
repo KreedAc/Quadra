@@ -2,6 +2,30 @@ package it.quadra.core.input
 
 import it.quadra.core.model.Money
 
+/** Le operazioni che il tastierino sa fare. Il simbolo è quello che compare sul tasto. */
+enum class Operazione(val simbolo: Char) {
+    PIU('+'), MENO('−'), PER('×'), DIVISO('÷');
+
+    /** Applica l'operazione a due importi in centesimi. */
+    internal fun applica(sinistra: Long, destra: Long): Long = when (this) {
+        PIU -> sinistra + destra
+        MENO -> sinistra - destra
+        // Il secondo operando è un moltiplicatore, non denaro: 4,50 × 3 fa 13,50.
+        // Passa per i centesimi, quindi va diviso per cento e arrotondato.
+        PER -> arrotonda(sinistra * destra, 100)
+        // Dividere per zero non ha risposta: si lascia il valore com'era.
+        DIVISO -> if (destra == 0L) sinistra else arrotonda(sinistra * 100, destra)
+    }
+
+    /** Divisione intera con arrotondamento al centesimo più vicino, mezzo per eccesso. */
+    private fun arrotonda(numeratore: Long, denominatore: Long): Long {
+        val segno = if ((numeratore < 0) != (denominatore < 0)) -1 else 1
+        val n = kotlin.math.abs(numeratore)
+        val d = kotlin.math.abs(denominatore)
+        return segno * ((n + d / 2) / d)
+    }
+}
+
 /**
  * Quello che l'utente ha digitato finora sul tastierino.
  *
@@ -28,17 +52,57 @@ data class Digitazione(
     val intero: String = "",
     /** null finché non si preme la virgola; poi "", "5", "50". */
     val decimali: String? = null,
+    /**
+     * Il risultato dei termini già chiusi da un operatore, in centesimi.
+     *
+     * Il tastierino fa i conti perché al bar si paga in una volta quello che si è preso
+     * in tre: 4,50 più 1,40 più 2,40. Farlo a mente mentre si è in fila è il modo più
+     * facile per sbagliare, ed è anche il momento in cui si rinuncia a registrare.
+     */
+    val parziale: Long? = null,
+    /** L'operatore che aspetta il termine che si sta scrivendo. */
+    val operazione: Operazione? = null,
+    /** I termini già chiusi, scritti come li ha digitati l'utente, per mostrarli. */
+    val passi: String = "",
 ) {
     val vuota: Boolean get() = intero.isEmpty() && decimali == null
 
     val haVirgola: Boolean get() = decimali != null
 
-    val importo: Money
+    /** I soli centesimi del termine che si sta scrivendo. */
+    private val termine: Long
         get() {
             val euro = intero.toLongOrNull() ?: 0L
             val centesimi = (decimali ?: "").padEnd(2, '0').toLongOrNull() ?: 0L
-            return Money(euro * 100 + centesimi)
+            return euro * 100 + centesimi
         }
+
+    /** Il risultato di tutto quello che è stato scritto, operazioni comprese. */
+    val importo: Money
+        get() = when {
+            operazione == null || parziale == null -> Money(termine)
+            // Con un operatore appeso e nessun termine ancora scritto vale il parziale:
+            // moltiplicare per zero azzererebbe il conto mentre si sta ancora digitando.
+            vuota -> Money(parziale)
+            else -> Money(operazione.applica(parziale, termine))
+        }
+
+    /**
+     * L'espressione scritta finora, o null quando non c'è nessuna operazione in corso.
+     *
+     * Con l'operatore appena premuto la formula si ferma lì: [testo] restituirebbe "0",
+     * e mostrare "10 − 0" farebbe credere di aver digitato uno zero che nessuno ha
+     * premuto.
+     */
+    val formula: String?
+        get() = when {
+            passi.isEmpty() -> null
+            vuota -> passi.trimEnd()
+            else -> passi + testo()
+        }
+
+    /** Vero quando c'è qualcosa di sensato da salvare. */
+    val valido: Boolean get() = importo.cents > 0
 
     /**
      * Una cifra.
@@ -71,12 +135,37 @@ data class Digitazione(
         else -> copy(decimali = "")
     }
 
-    /** Cancella l'ultimo tasto premuto, virgola compresa, nell'ordine in cui è stato premuto. */
+    /**
+     * Cancella l'ultimo tasto premuto, virgola compresa, nell'ordine in cui è stato premuto.
+     *
+     * Su un termine vuoto con un'operazione appesa, il passo indietro è annullare
+     * l'operazione: il parziale torna a essere il numero che si sta scrivendo, così si
+     * può correggere invece di restare bloccati con un operatore che non risponde.
+     */
     fun indietro(): Digitazione = when {
-        decimali == null -> copy(intero = intero.dropLast(1))
-        decimali.isNotEmpty() -> copy(decimali = decimali.dropLast(1))
+        !decimali.isNullOrEmpty() -> copy(decimali = decimali.dropLast(1))
         // La virgola c'è ma è vuota: il passo indietro è toglierla.
-        else -> copy(decimali = null)
+        decimali == "" -> copy(decimali = null)
+        intero.isNotEmpty() -> copy(intero = intero.dropLast(1))
+        parziale != null -> da(Money(parziale))
+        else -> this
+    }
+
+    /**
+     * Chiude il termine corrente e mette in attesa un'operazione.
+     *
+     * Premuto due volte di fila cambia l'operatore invece di aggiungerne un altro: è
+     * quello che si intende quando si sbaglia tasto.
+     */
+    fun operazione(nuova: Operazione): Digitazione {
+        if (vuota && operazione != null) {
+            return copy(operazione = nuova, passi = passi.dropLast(3) + " ${nuova.simbolo} ")
+        }
+        return Digitazione(
+            parziale = importo.cents,
+            operazione = nuova,
+            passi = passi + testo() + " ${nuova.simbolo} ",
+        )
     }
 
     fun azzera(): Digitazione = Digitazione()

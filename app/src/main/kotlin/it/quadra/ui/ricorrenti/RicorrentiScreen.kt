@@ -413,7 +413,7 @@ private fun FoglioRegola(
                 onScelta = { conto = it },
             )
 
-            val pronto = !digitato.importo.isZero && categoria != null && conto != null
+            val pronto = digitato.valido && categoria != null && conto != null
             Azione("Salva", extra.brandEnd, pronto) {
                 val c = categoria ?: return@Azione
                 val a = conto ?: return@Azione

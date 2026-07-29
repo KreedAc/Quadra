@@ -158,4 +158,63 @@ class StatisticsTest {
         val aFebbraio = listOf(mov(-28000, "spesa.supermercato", "2026-02-10"))
         assertEquals(Money.of(10), Statistics.dailyAverage(aFebbraio, febbraio))
     }
+
+    // ------------------------------------------------------------- entrate
+
+    @Test
+    fun `le entrate si raggruppano per voce, dalla più grossa`() {
+        val movimenti = listOf(
+            mov(183100, "entrate.stipendio"),
+            mov(58576, "entrate.sussidi"),
+            mov(113242, "entrate.lavoro_autonomo"),
+            mov(20000, "entrate.stipendio", "2026-07-11"),
+            mov(-5000, "spesa"),
+        )
+        val voci = Statistics.incomeByCategory(movimenti)
+        assertEquals(3, voci.size)
+        assertEquals("entrate.stipendio", voci[0].categoryId)
+        assertEquals(Money.of(2031), voci[0].total)
+        assertEquals("entrate.lavoro_autonomo", voci[1].categoryId)
+        assertEquals("entrate.sussidi", voci[2].categoryId)
+    }
+
+    @Test
+    fun `le spese non entrano nel conto delle entrate`() {
+        val movimenti = listOf(mov(100000, "entrate.stipendio"), mov(-30000, "spesa"))
+        assertEquals(Money.of(1000), Statistics.totalIncome(movimenti))
+        assertEquals(1, Statistics.incomeByCategory(movimenti).size)
+    }
+
+    @Test
+    fun `un trasferimento non è un'entrata`() {
+        // La gamba in arrivo di un trasferimento è denaro spostato, non guadagnato:
+        // contarla gonferebbe il totale del mese di una cifra mai entrata.
+        val (uscita, arrivo) = Ledger.transfer(
+            from = Account("a", "Carta", AccountKind.CARD, 0, Money.of(500)),
+            to = Account("b", "Contanti", AccountKind.CASH, 0, Money.ZERO),
+            amount = Money.of(100),
+            date = LocalDate.parse("2026-07-10"),
+            groupId = "g1",
+            idFactory = { "leg$it" },
+        )
+        assertEquals(Money.ZERO, Statistics.totalIncome(listOf(uscita, arrivo)))
+        assertTrue(Statistics.incomeByCategory(listOf(uscita, arrivo)).isEmpty())
+    }
+
+    @Test
+    fun `senza entrate non c'è niente da mostrare`() {
+        assertTrue(Statistics.incomeByCategory(emptyList()).isEmpty())
+        assertEquals(Money.ZERO, Statistics.totalIncome(emptyList()))
+    }
+
+    @Test
+    fun `le quote delle entrate sommano a uno`() {
+        val movimenti = listOf(
+            mov(75000, "entrate.stipendio"),
+            mov(25000, "entrate.sussidi"),
+        )
+        val voci = Statistics.incomeByCategory(movimenti)
+        assertEquals(0.75, voci[0].share, 0.0001)
+        assertEquals(0.25, voci[1].share, 0.0001)
+    }
 }

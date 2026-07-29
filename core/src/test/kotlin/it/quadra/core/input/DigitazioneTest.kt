@@ -4,6 +4,7 @@ import it.quadra.core.model.Money
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DigitazioneTest {
@@ -13,6 +14,10 @@ class DigitazioneTest {
             when (tasto) {
                 ',' -> stato.virgola()
                 '<' -> stato.indietro()
+                '+' -> stato.operazione(Operazione.PIU)
+                '-' -> stato.operazione(Operazione.MENO)
+                '*' -> stato.operazione(Operazione.PER)
+                '/' -> stato.operazione(Operazione.DIVISO)
                 else -> stato.cifra(tasto)
             }
         }
@@ -133,5 +138,116 @@ class DigitazioneTest {
     fun `il segno non entra nella digitazione`() {
         // Uscita o entrata lo decide la categoria, non il tastierino.
         assertEquals(Money.of(20), Digitazione.da(Money.of(-20)).importo)
+    }
+}
+
+class OperazioniTest {
+
+    private fun digita(tasti: String): Digitazione =
+        tasti.fold(Digitazione()) { stato, tasto ->
+            when (tasto) {
+                ',' -> stato.virgola()
+                '<' -> stato.indietro()
+                '+' -> stato.operazione(Operazione.PIU)
+                '-' -> stato.operazione(Operazione.MENO)
+                '*' -> stato.operazione(Operazione.PER)
+                '/' -> stato.operazione(Operazione.DIVISO)
+                else -> stato.cifra(tasto)
+            }
+        }
+
+    @Test
+    fun `la colazione al bar si somma senza farla a mente`() {
+        // Il caso vero: caffè, cornetto e spremuta pagati in una volta sola.
+        assertEquals(Money.of(8, 30), digita("4,5+1,4+2,4").importo)
+    }
+
+    @Test
+    fun `la formula mostra i termini come sono stati scritti`() {
+        assertEquals("4,5 + 1,4 + 2,4", digita("4,5+1,4+2,4").formula)
+        // Senza operazioni non c'è niente da mostrare: resta il numero e basta.
+        assertNull(digita("20").formula)
+    }
+
+    @Test
+    fun `il totale si vede già prima di scrivere il termine dopo`() {
+        // Premuto il più, il conto vale quello che c'è: moltiplicare per zero un termine
+        // ancora da scrivere azzererebbe tutto mentre si sta ancora digitando.
+        assertEquals(Money.of(5, 90), digita("4,5+1,4+").importo)
+        assertEquals(Money.of(4, 50), digita("4,5*").importo)
+    }
+
+    @Test
+    fun `la sottrazione toglie`() {
+        assertEquals(Money.of(7, 50), digita("10-2,5").importo)
+    }
+
+    @Test
+    fun `tre caffè si moltiplicano`() {
+        assertEquals(Money.of(3, 60), digita("1,2*3").importo)
+    }
+
+    @Test
+    fun `il conto diviso in tre arrotonda al centesimo`() {
+        assertEquals(Money.of(3, 33), digita("10/3").importo)
+        assertEquals(Money.of(10), digita("30/3").importo)
+    }
+
+    @Test
+    fun `dividere per zero lascia il conto com'era invece di esplodere`() {
+        assertEquals(Money.of(10), digita("10/0").importo)
+        assertEquals(Money.of(10), digita("10/").importo)
+    }
+
+    @Test
+    fun `le operazioni si concatenano da sinistra`() {
+        // Nessuna precedenza: si legge come una striscia di scontrino, non come algebra.
+        assertEquals(Money.of(9), digita("10-4+3").importo)
+        assertEquals(Money.of(6), digita("1+1*3").importo)
+    }
+
+    @Test
+    fun `premere due operatori di fila cambia idea invece di sbagliare`() {
+        assertEquals(Money.of(7, 50), digita("10+-2,5").importo)
+        assertEquals("10 −", digita("10+-").formula)
+    }
+
+    @Test
+    fun `cancellare su un termine vuoto annulla l'operazione`() {
+        // Senza, chi preme il più per sbaglio resta bloccato con un operatore appeso.
+        val dopo = digita("4,5+<")
+        assertEquals(Money.of(4, 50), dopo.importo)
+        assertNull(dopo.formula)
+        assertEquals("4,50", dopo.testo())
+    }
+
+    @Test
+    fun `cancellare dentro un termine non tocca il conto già fatto`() {
+        val dopo = digita("4,5+1,45<")
+        assertEquals("4,5 + 1,4", dopo.formula)
+        assertEquals(Money.of(5, 90), dopo.importo)
+    }
+
+    @Test
+    fun `un risultato negativo non è salvabile`() {
+        // 4,50 meno 10 non è una spesa: il pulsante resta spento invece di scrivere
+        // un movimento che non ha senso.
+        val sottozero = digita("4,5-10")
+        assertEquals(Money.of(-5, 50), sottozero.importo)
+        assertFalse(sottozero.valido)
+        assertTrue(digita("4,5+1,4").valido)
+        assertFalse(digita("").valido)
+    }
+
+    @Test
+    fun `azzerare toglie anche le operazioni in corso`() {
+        assertEquals(Digitazione(), digita("4,5+1,4").azzera())
+    }
+
+    @Test
+    fun `il denaro resta in centesimi anche passando per le operazioni`() {
+        // Nessun Double di mezzo: 0,1 + 0,2 deve fare esattamente 0,30.
+        assertEquals(Money.of(0, 30), digita("0,1+0,2").importo)
+        assertEquals(Money.of(0, 1), digita("0,03/3").importo)
     }
 }

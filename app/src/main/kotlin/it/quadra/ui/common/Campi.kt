@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import it.quadra.core.input.Digitazione
+import it.quadra.core.input.Operazione
 import it.quadra.core.model.Money
 import it.quadra.ui.ICONE_SCEGLIBILI
 import it.quadra.ui.Icone
@@ -114,11 +115,19 @@ val TAVOLOZZA: List<Int> = listOf(
 ).map { it.toInt() }
 
 /**
- * Tastierino numerico disegnato a mano.
+ * Tastierino numerico disegnato a mano, con le quattro operazioni.
  *
  * I tasti scrivono il numero come lo si scriverebbe su un foglio: 2, 0 fa venti, e i
  * centesimi arrivano solo dopo la virgola. Le regole stanno in [Digitazione], nel modulo
  * :core, dove sono coperte dai test: qui restano soltanto i tasti.
+ *
+ * Gli operatori esistono perché al bar si paga in una volta quello che si è preso in tre.
+ * Farlo a mente mentre si è in fila alla cassa è il modo più facile per sbagliare, ed è
+ * anche il momento in cui si rinuncia a registrare la spesa.
+ *
+ * Non c'è il tasto uguale: il totale è sempre scritto sotto la formula, quindi non c'è
+ * niente da chiudere. Un tasto che serve solo a mostrare un numero già visibile è un
+ * tocco chiesto per abitudine.
  */
 @Composable
 fun Tastierino(
@@ -126,11 +135,14 @@ fun Tastierino(
     modifier: Modifier = Modifier,
     onCambia: (Digitazione) -> Unit,
 ) {
-    val righe = listOf("123", "456", "789", ",0<")
+    // Gli operatori a sinistra, come sulle calcolatrici e come nelle app da cui la gente
+    // arriva: la posizione conta più della forma, ed è quella che il pollice impara.
+    val righe = listOf("÷123", "×456", "−789", "+,0<")
     Column(modifier, verticalArrangement = Arrangement.spacedBy(7.dp)) {
         righe.forEach { riga ->
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
                 riga.forEach { tasto ->
+                    val operatore = OPERATORI[tasto]
                     // La virgola già premuta non ha più niente da fare: spegnerla evita
                     // di far premere un tasto che non risponde.
                     val attivo = tasto != ',' || !stato.haVirgola
@@ -139,12 +151,16 @@ fun Tastierino(
                             .weight(1f)
                             .height(46.dp)
                             .clip(RoundedCornerShape(15.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(
+                                if (operatore != null) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
                             .clickable(enabled = attivo) {
                                 onCambia(
-                                    when (tasto) {
-                                        '<' -> stato.indietro()
-                                        ',' -> stato.virgola()
+                                    when {
+                                        operatore != null -> stato.operazione(operatore)
+                                        tasto == '<' -> stato.indietro()
+                                        tasto == ',' -> stato.virgola()
                                         else -> stato.cifra(tasto)
                                     }
                                 )
@@ -162,8 +178,11 @@ fun Tastierino(
                             Text(
                                 tasto.toString(),
                                 style = MaterialTheme.typography.headlineSmall.tabular,
-                                color = if (attivo) MaterialTheme.colorScheme.onSurface
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                color = when {
+                                    !attivo -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                    operatore != null -> extra.brandEnd
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                },
                             )
                         }
                     }
@@ -173,15 +192,36 @@ fun Tastierino(
     }
 }
 
+private val OPERATORI: Map<Char, Operazione> = Operazione.entries.associateBy { it.simbolo }
+
 /**
- * L'importo in composizione, grande e centrato.
+ * L'importo in composizione, grande e centrato, con sopra la formula se ce n'è una.
  *
- * Mostra i tasti premuti e non l'importo formattato: appena si preme la virgola si deve
- * leggere "20,", perché "20,00" farebbe sembrare i centesimi già scritti.
+ * Senza operazioni mostra i tasti premuti e non l'importo formattato: appena si preme la
+ * virgola si deve leggere "20,", perché "20,00" farebbe sembrare i centesimi già scritti.
+ *
+ * Con un'operazione in corso il numero grande diventa il totale, e i termini scendono
+ * nella riga sopra. È il totale la cosa che si va a leggere prima di salvare, e lasciare
+ * in grande l'ultimo addendo sarebbe il modo più facile per salvare la cifra sbagliata.
  */
 @Composable
 fun ImportoGrande(stato: Digitazione, modifier: Modifier = Modifier) {
-    ImportoGrande("${stato.testo()} €", modifier)
+    val formula = stato.formula
+    Column(modifier.fillMaxWidth()) {
+        if (formula != null) {
+            Text(
+                formula,
+                style = MaterialTheme.typography.bodyMedium.tabular,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        ImportoGrande(
+            if (formula == null) "${stato.testo()} €" else stato.importo.format(),
+            Modifier,
+        )
+    }
 }
 
 @Composable

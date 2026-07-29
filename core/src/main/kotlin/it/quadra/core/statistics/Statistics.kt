@@ -79,6 +79,39 @@ object Statistics {
         }
     }
 
+    /**
+     * Le entrate del periodo raggruppate per voce, dalla più grossa.
+     *
+     * Sono tenute separate dalle spese e non mescolate col segno opposto: uno stipendio
+     * e un affitto non appartengono alla stessa classifica, e sommarli in un unico
+     * elenco produce una percentuale che non risponde a nessuna domanda.
+     *
+     * Il raggruppamento è sulla voce esatta e non sulla radice: "Entrate" da sola non
+     * dice niente, mentre stipendio, sussidio e lavoro autonomo sono proprio la
+     * distinzione che si vuole leggere.
+     */
+    fun incomeByCategory(transactions: List<Transaction>): List<CategoryTotal> {
+        val entrate = Ledger.spending(transactions).filter { it.isIncome }
+        if (entrate.isEmpty()) return emptyList()
+
+        val totale = entrate.map { it.amount }.sum()
+        return entrate
+            .groupBy { it.categoryId }
+            .map { (categoria, movimenti) ->
+                val somma = movimenti.map { it.amount }.sum()
+                CategoryTotal(
+                    categoryId = categoria,
+                    total = somma,
+                    share = if (totale.isZero) 0.0 else somma.cents.toDouble() / totale.cents,
+                )
+            }
+            .sortedByDescending { it.total.cents }
+    }
+
+    /** Quanto è entrato in tutto nel periodo. */
+    fun totalIncome(transactions: List<Transaction>): Money =
+        Ledger.spending(transactions).filter { it.isIncome }.map { it.amount }.sum()
+
     /** Gli ultimi [count] mesi fino a [last] compreso, dal più vecchio al più recente. */
     fun lastMonths(last: YearMonth, count: Int): List<YearMonth> {
         require(count >= 1) { "Servono almeno un mese, richiesti $count" }

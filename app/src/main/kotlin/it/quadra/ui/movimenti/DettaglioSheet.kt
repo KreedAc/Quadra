@@ -189,7 +189,7 @@ fun DettaglioSheet(
                 data != movimento.date ||
                 descrizione != movimento.description ||
                 note != movimento.notes
-            val valido = !digitato.importo.isZero && categoria != null && conto != null
+            val valido = digitato.valido && categoria != null && conto != null
 
             Azione("Salva", extra.brandEnd, cambiato && valido) {
                 onSalva(digitato.importo, categoria!!.id, conto!!.id, data, descrizione, note)

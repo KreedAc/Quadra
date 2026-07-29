@@ -137,7 +137,7 @@ fun ScadenzaSheet(
             ImportoGrande(digitato)
             Tastierino(digitato) { digitato = it }
 
-            Azione("Registra", extra.brandEnd, !digitato.importo.isZero) {
+            Azione("Registra", extra.brandEnd, digitato.valido) {
                 onConferma(digitato.importo)
             }
 

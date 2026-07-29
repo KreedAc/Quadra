@@ -523,7 +523,7 @@ private fun PassoEntrata(entrate: List<Category>, onConferma: (Money, String) ->
     )
     ImportoGrande(digitato)
     Tastierino(digitato) { digitato = it }
-    val pronto = !importo.isZero && categoria != null
+    val pronto = digitato.valido && categoria != null
     Azione("Registra entrata", extra.income, pronto) {
         categoria?.let { onConferma(importo, it.id) }
     }
@@ -549,7 +549,7 @@ private fun PassoTrasferimento(
     )
     ImportoGrande(digitato)
     Tastierino(digitato) { digitato = it }
-    val pronto = !importo.isZero && destinazione != null
+    val pronto = digitato.valido && destinazione != null
     Azione("Trasferisci", extra.brandEnd, pronto) {
         destinazione?.let { onConferma(it, importo) }
     }
