@@ -1,5 +1,7 @@
 package it.quadra.ui.impostazioni
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -57,6 +59,7 @@ fun ImpostazioniScreen(
     snackbar: SnackbarHostState,
     onApriCategorie: () -> Unit,
     onApriRicorrenti: () -> Unit,
+    onApriTutorial: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -98,6 +101,18 @@ fun ImpostazioniScreen(
 
         item {
             Riquadro {
+                // In cima e non in fondo: chi ha saltato la presentazione al primo
+                // avvio la cerca qui, e la cerca subito.
+                VoceImpostazione(
+                    icona = Icone.Lucchetto,
+                    titolo = "Come funziona Quadra",
+                    sottotitolo = "Le quattro cose che conviene sapere, in un minuto",
+                    onClick = onApriTutorial,
+                )
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
                 VoceImpostazione(
                     icona = Icone.Elenco,
                     titolo = "Categorie",
@@ -185,6 +200,10 @@ fun ImpostazioniScreen(
                         "spegne dalle impostazioni di Android, alla voce backup.",
                 ),
             )
+        }
+
+        if (DONAZIONE.isNotBlank()) {
+            item { Donazione() }
         }
 
         item {
@@ -304,6 +323,76 @@ private fun Aspetto(scelto: Tema, onScelta: (Tema) -> Unit) {
                 )
             }
         }
+    }
+}
+
+/**
+ * Dove va chi vuole offrire un caffè.
+ *
+ * Vuoto di proposito: finché non c'è un indirizzo vero il riquadro non compare, così non
+ * si rischia di pubblicare un pulsante che porta a una pagina che non esiste. Basta
+ * incollare qui un link PayPal.me, Ko-fi o simile.
+ *
+ * Deve restare una donazione e nient'altro. Nel momento in cui dà qualcosa in cambio —
+ * una funzione in più, la pubblicità tolta, un distintivo — smette di essere una
+ * donazione e diventa un acquisto, che Google obbliga a far passare dal suo sistema di
+ * pagamento. E soprattutto tradirebbe il patto: l'app è intera per tutti.
+ */
+private val DONAZIONE: String = ""
+
+/**
+ * Il pulsante apre il browser, non un pagamento.
+ *
+ * È la ragione per cui l'app continua a non dichiarare nessun permesso: la rete la fa il
+ * browser, che è un'altra applicazione. Se il pagamento avvenisse qui dentro servirebbe
+ * `INTERNET`, e la riga "non chiede nemmeno un permesso" diventerebbe falsa — cioè
+ * costerebbe molto più di quanto qualunque donazione possa rendere.
+ */
+@Composable
+private fun Donazione() {
+    val contesto = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .clickable {
+                // Un telefono senza browser è raro ma esiste, e un'app che si chiude
+                // toccando "offri un caffè" è il peggior modo di chiedere qualcosa.
+                runCatching {
+                    contesto.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(DONAZIONE)))
+                }
+            }
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icone.Caffe,
+                contentDescription = null,
+                tint = extra.income,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.size(16.dp))
+            Text(
+                "Offri un caffè",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                Icone.Destra,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Text(
+            "Quadra è gratis e resta gratis: non c'è niente da sbloccare e non ci sarà " +
+                "mai. Se ti è utile e ti va, si apre il browser e decidi tu.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

@@ -12,6 +12,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,7 +30,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -56,6 +59,9 @@ import it.quadra.ui.ricorrenti.RicorrentiViewModel
 import it.quadra.ui.statistiche.StatisticheScreen
 import it.quadra.ui.statistiche.StatisticheViewModel
 import it.quadra.ui.theme.extra
+import it.quadra.ui.tutorial.Tutorial
+import it.quadra.ui.tutorial.TutorialScreen
+import kotlinx.coroutines.launch
 
 /**
  * Le quattro destinazioni della barra in basso.
@@ -99,6 +105,18 @@ class Fabbrica<T : ViewModel>(private val costruisci: () -> T) : ViewModelProvid
 fun Root(repository: LedgerRepository) {
     var vista by remember { mutableStateOf(Vista(Destinazione.MOVIMENTI)) }
     val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    // Il tutorial al primo avvio, e solo lì.
+    //
+    // Parte da null e non da "sì": leggere la preferenza costa un giro sul database, e
+    // partire dal sì farebbe lampeggiare la sequenza addosso a chi l'ha già vista. Fino
+    // alla risposta non si mostra niente, che dura un fotogramma e non si nota.
+    val daMostrare by produceState<Boolean?>(initialValue = null, repository) {
+        repository.observePreferenza(Tutorial.CHIAVE)
+            .collect { value = it != Tutorial.VERSIONE.toString() }
+    }
+    var riaperto by remember { mutableStateOf(false) }
 
     val movimentiVM: MovimentiViewModel = viewModel(factory = Fabbrica { MovimentiViewModel(repository) })
     val contiVM: ContiViewModel = viewModel(factory = Fabbrica { ContiViewModel(repository) })
@@ -116,122 +134,139 @@ fun Root(repository: LedgerRepository) {
         vista = vista.copy(sotto = null)
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbar) },
-        bottomBar = {
-            // L'inserimento occupa tutto lo schermo: la barra sotto offrirebbe una via
-            // di fuga che perde quello che si sta scrivendo.
-            if (vista.sotto != Sotto.AGGIUNGI) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 0.dp,
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            snackbarHost = { SnackbarHost(snackbar) },
+            bottomBar = {
+                // L'inserimento occupa tutto lo schermo: la barra sotto offrirebbe una via
+                // di fuga che perde quello che si sta scrivendo.
+                if (vista.sotto != Sotto.AGGIUNGI) {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 0.dp,
+                    ) {
+                        Destinazione.entries.forEach { voce ->
+                            NavigationBarItem(
+                                selected = vista.scheda == voce && vista.sotto == null,
+                                // Torna sempre al primo livello: è il comportamento che ci
+                                // si aspetta da una barra di navigazione, e senza questo
+                                // toccarla da dentro le categorie non cambiava schermata.
+                                onClick = { vista = Vista(voce) },
+                                icon = { Icon(voce.icona, contentDescription = null) },
+                                label = { Text(voce.etichetta, style = MaterialTheme.typography.labelSmall) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = extra.brandEnd,
+                                    selectedTextColor = extra.brandEnd,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    indicatorColor = Color.Transparent,
+                                ),
+                            )
+                        }
+                    }
+                }
+            },
+            floatingActionButton = {
+                // Il pulsante compare solo dove ha senso: registrare una spesa dalla
+                // schermata delle impostazioni non vuol dire niente. Compare crescendo
+                // invece di apparire, così cambiando scheda si vede che è arrivato.
+                AnimatedVisibility(
+                    visible = vista == Vista(Destinazione.MOVIMENTI),
+                    enter = scaleIn(tween(180)) + fadeIn(tween(180)),
+                    exit = scaleOut(tween(140)) + fadeOut(tween(140)),
                 ) {
-                    Destinazione.entries.forEach { voce ->
-                        NavigationBarItem(
-                            selected = vista.scheda == voce && vista.sotto == null,
-                            // Torna sempre al primo livello: è il comportamento che ci
-                            // si aspetta da una barra di navigazione, e senza questo
-                            // toccarla da dentro le categorie non cambiava schermata.
-                            onClick = { vista = Vista(voce) },
-                            icon = { Icon(voce.icona, contentDescription = null) },
-                            label = { Text(voce.etichetta, style = MaterialTheme.typography.labelSmall) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = extra.brandEnd,
-                                selectedTextColor = extra.brandEnd,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                indicatorColor = Color.Transparent,
+                    val forma = RoundedCornerShape(19.dp)
+                    FloatingActionButton(
+                        onClick = { vista = vista.copy(sotto = Sotto.AGGIUNGI) },
+                        containerColor = Color.Transparent,
+                        contentColor = extra.onBrand,
+                        shape = forma,
+                        // L'ombra di serie è nera e su fondo scuro non si vede. Questa è
+                        // colorata come il pulsante: è quella che lo stacca dal fondo e gli
+                        // dà l'aria di essere acceso invece che incollato.
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+                        modifier = Modifier
+                            .shadow(
+                                elevation = 20.dp,
+                                shape = forma,
+                                ambientColor = extra.brandStart,
+                                spotColor = extra.brandStart,
+                            )
+                            .background(
+                                Brush.linearGradient(listOf(extra.brandStart, extra.brandEnd)),
+                                forma,
                             ),
+                    ) {
+                        Icon(Icone.Piu, contentDescription = "Aggiungi una spesa")
+                    }
+                }
+            },
+        ) { insets ->
+            AnimatedContent(
+                targetState = vista,
+                transitionSpec = { transizione(initialState, targetState) },
+                label = "vista",
+            ) { corrente ->
+                val contenuto = Modifier.fillMaxSize().padding(insets)
+                when (corrente.sotto) {
+                    Sotto.CATEGORIE -> CategorieScreen(
+                        viewModel = categorieVM,
+                        onIndietro = { vista = vista.copy(sotto = null) },
+                        modifier = contenuto,
+                    )
+
+                    Sotto.RICORRENTI -> RicorrentiScreen(
+                        viewModel = ricorrentiVM,
+                        onIndietro = { vista = vista.copy(sotto = null) },
+                        modifier = contenuto,
+                    )
+
+                    Sotto.AGGIUNGI -> {
+                        val stato by movimentiVM.stato.collectAsStateWithLifecycle()
+                        AggiungiScreen(
+                            categorie = stato.categoriePrincipali,
+                            tutteLeCategorie = stato.categorie,
+                            conti = stato.conti,
+                            onChiudi = { vista = vista.copy(sotto = null) },
+                            onPersonalizza = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
+                            onSalva = { importo, categoriaId, contoId ->
+                                movimentiVM.aggiungi(importo, categoriaId, contoId)
+                                vista = vista.copy(sotto = null)
+                            },
+                            modifier = Modifier.fillMaxSize().padding(insets),
+                        )
+                    }
+
+                    null -> when (corrente.scheda) {
+                        Destinazione.MOVIMENTI -> MovimentiScreen(movimentiVM, snackbar, contenuto)
+                        Destinazione.CONTI -> ContiScreen(contiVM, contenuto)
+                        Destinazione.STATISTICHE -> StatisticheScreen(statisticheVM, contenuto)
+                        Destinazione.IMPOSTAZIONI -> ImpostazioniScreen(
+                            viewModel = impostazioniVM,
+                            snackbar = snackbar,
+                            onApriCategorie = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
+                            onApriRicorrenti = { vista = vista.copy(sotto = Sotto.RICORRENTI) },
+                            onApriTutorial = { riaperto = true },
+                            modifier = contenuto,
                         )
                     }
                 }
             }
-        },
-        floatingActionButton = {
-            // Il pulsante compare solo dove ha senso: registrare una spesa dalla
-            // schermata delle impostazioni non vuol dire niente. Compare crescendo
-            // invece di apparire, così cambiando scheda si vede che è arrivato.
-            AnimatedVisibility(
-                visible = vista == Vista(Destinazione.MOVIMENTI),
-                enter = scaleIn(tween(180)) + fadeIn(tween(180)),
-                exit = scaleOut(tween(140)) + fadeOut(tween(140)),
-            ) {
-                val forma = RoundedCornerShape(19.dp)
-                FloatingActionButton(
-                    onClick = { vista = vista.copy(sotto = Sotto.AGGIUNGI) },
-                    containerColor = Color.Transparent,
-                    contentColor = extra.onBrand,
-                    shape = forma,
-                    // L'ombra di serie è nera e su fondo scuro non si vede. Questa è
-                    // colorata come il pulsante: è quella che lo stacca dal fondo e gli
-                    // dà l'aria di essere acceso invece che incollato.
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-                    modifier = Modifier
-                        .shadow(
-                            elevation = 20.dp,
-                            shape = forma,
-                            ambientColor = extra.brandStart,
-                            spotColor = extra.brandStart,
-                        )
-                        .background(
-                            Brush.linearGradient(listOf(extra.brandStart, extra.brandEnd)),
-                            forma,
-                        ),
-                ) {
-                    Icon(Icone.Piu, contentDescription = "Aggiungi una spesa")
-                }
-            }
-        },
-    ) { insets ->
-        AnimatedContent(
-            targetState = vista,
-            transitionSpec = { transizione(initialState, targetState) },
-            label = "vista",
-        ) { corrente ->
-            val contenuto = Modifier.fillMaxSize().padding(insets)
-            when (corrente.sotto) {
-                Sotto.CATEGORIE -> CategorieScreen(
-                    viewModel = categorieVM,
-                    onIndietro = { vista = vista.copy(sotto = null) },
-                    modifier = contenuto,
-                )
+        }
 
-                Sotto.RICORRENTI -> RicorrentiScreen(
-                    viewModel = ricorrentiVM,
-                    onIndietro = { vista = vista.copy(sotto = null) },
-                    modifier = contenuto,
-                )
-
-                Sotto.AGGIUNGI -> {
-                    val stato by movimentiVM.stato.collectAsStateWithLifecycle()
-                    AggiungiScreen(
-                        categorie = stato.categoriePrincipali,
-                        tutteLeCategorie = stato.categorie,
-                        conti = stato.conti,
-                        onChiudi = { vista = vista.copy(sotto = null) },
-                        onPersonalizza = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
-                        onSalva = { importo, categoriaId, contoId ->
-                            movimentiVM.aggiungi(importo, categoriaId, contoId)
-                            vista = vista.copy(sotto = null)
-                        },
-                        modifier = Modifier.fillMaxSize().padding(insets),
-                    )
-                }
-
-                null -> when (corrente.scheda) {
-                    Destinazione.MOVIMENTI -> MovimentiScreen(movimentiVM, snackbar, contenuto)
-                    Destinazione.CONTI -> ContiScreen(contiVM, contenuto)
-                    Destinazione.STATISTICHE -> StatisticheScreen(statisticheVM, contenuto)
-                    Destinazione.IMPOSTAZIONI -> ImpostazioniScreen(
-                        viewModel = impostazioniVM,
-                        snackbar = snackbar,
-                        onApriCategorie = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
-                        onApriRicorrenti = { vista = vista.copy(sotto = Sotto.RICORRENTI) },
-                        modifier = contenuto,
-                    )
-                }
-            }
+        // Il tutorial sta sopra tutto, barra di navigazione compresa: è una cosa che
+        // si legge, non una scheda in cui si naviga, e lasciare visibile una via di
+        // fuga che non funziona sarebbe peggio che non averla.
+        if (riaperto || daMostrare == true) {
+            TutorialScreen(
+                onFine = {
+                    riaperto = false
+                    scope.launch {
+                        repository.salvaPreferenza(Tutorial.CHIAVE, Tutorial.VERSIONE.toString())
+                    }
+                },
+            )
         }
     }
 }
