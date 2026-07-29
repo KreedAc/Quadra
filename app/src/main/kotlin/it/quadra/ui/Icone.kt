@@ -209,6 +209,12 @@ object Icone {
         cerchio(14.4f, 17.4f, 2.2f),
     )
 
+    /** Mezzaluna: l'aspetto dell'app, chiaro o scuro. */
+    val Luna = tratto(
+        "luna",
+        "M20.2 14.2A8.6 8.6 0 0 1 9.8 3.8a8.6 8.6 0 1 0 10.4 10.4Z",
+    )
+
     // ────────────────────────────────────────────────────────── azioni
 
     val Piu = tratto("piu", "M12 5.4v13.2M5.4 12h13.2")

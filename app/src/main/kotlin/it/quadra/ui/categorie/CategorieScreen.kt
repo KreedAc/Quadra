@@ -1,10 +1,13 @@
 package it.quadra.ui.categorie
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -130,33 +134,49 @@ fun CategorieScreen(
     var inModifica by remember { mutableStateOf<Category?>(null) }
     var nuovaSottoDi by remember { mutableStateOf<Category?>(null) }
     var nuovaPrincipale by remember { mutableStateOf(false) }
+    // Una aperta alla volta: sedici categorie con tutte le voci in vista sono una
+    // parete di pastiglie, e la parete è la ragione per cui la pagina si legge male.
+    var aperta by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(
         modifier = modifier.padding(horizontal = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            Row(
-                Modifier.fillMaxWidth().padding(top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    Icone.Sinistra,
-                    contentDescription = "Indietro",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(26.dp).clickable(onClick = onIndietro),
+            Column(Modifier.padding(top = 8.dp, bottom = 4.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icone.Sinistra,
+                        contentDescription = "Indietro",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(26.dp).clickable(onClick = onIndietro),
+                    )
+                    Spacer(Modifier.size(10.dp))
+                    Text("Categorie", style = MaterialTheme.typography.headlineSmall)
+                }
+                Spacer(Modifier.height(6.dp))
+                // Due gesti diversi sulla stessa riga vanno detti una volta, qui: senza,
+                // si scopre solo per tentativi che la matita e il resto della riga fanno
+                // cose diverse.
+                Text(
+                    "Tocca una categoria per vedere le sue voci. La matita rinomina, " +
+                        "ricolora o elimina.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.size(10.dp))
-                Text("Categorie", style = MaterialTheme.typography.headlineSmall)
             }
         }
 
         items(stato.principali, key = { it.id }) { categoria ->
+            val figlie = stato.figlie(categoria.id)
             BloccoCategoria(
                 categoria = categoria,
-                figlie = stato.figlie(categoria.id),
+                figlie = figlie,
+                aperta = aperta == categoria.id,
+                onApri = { aperta = if (aperta == categoria.id) null else categoria.id },
                 onModifica = { inModifica = it },
                 onAggiungiSotto = { nuovaSottoDi = categoria },
+                modifier = Modifier.animateItem(),
             )
         }
 
@@ -199,24 +219,38 @@ fun CategorieScreen(
     }
 }
 
+/**
+ * Una categoria: chiusa è una riga, aperta mostra le sue voci.
+ *
+ * Prima erano tutte aperte insieme. Con sedici categorie la pagina diventava una
+ * colonna di riquadri alti uguali, ciascuno con la sua fila di pastiglie, e niente
+ * diceva più dove finisse una categoria e cominciasse l'altra: si capiva leggendo, mai
+ * a colpo d'occhio. Chiuse, l'elenco delle categorie si vede tutto insieme — che è
+ * l'unica cosa per cui si entra qui — e le voci si scoprono su richiesta.
+ *
+ * La freccia gira invece di cambiare disegno: è lo stesso oggetto che si apre, e vederlo
+ * ruotare dice quale riga ha risposto al tocco.
+ */
 @Composable
 private fun BloccoCategoria(
     categoria: Category,
     figlie: List<Category>,
+    aperta: Boolean,
+    onApri: () -> Unit,
     onModifica: (Category) -> Unit,
     onAggiungiSotto: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colore = Color(categoria.colorArgb)
+    val rotazione by animateFloatAsState(if (aperta) 90f else 0f, label = "freccia")
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+            .background(MaterialTheme.colorScheme.surface),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().clickable { onModifica(categoria) },
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onApri).padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -229,33 +263,66 @@ private fun BloccoCategoria(
             ) {
                 Icon(iconFor(categoria.icon), contentDescription = null, tint = colore, modifier = Modifier.size(19.dp))
             }
-            Text(
-                categoria.name,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    categoria.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    quanteVoci(figlie.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            // La matita è un bersaglio suo, staccato dalla riga: da qui si modifica la
+            // categoria, dalla riga si aprono le voci.
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .clickable { onModifica(categoria) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icone.Matita,
+                    contentDescription = "Modifica ${categoria.name}",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
             Icon(
-                Icone.Matita,
-                contentDescription = "Modifica",
+                Icone.Destra,
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(18.dp).rotate(rotazione),
             )
         }
 
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            items(figlie, key = { it.id }) { figlia ->
-                // Anche le sottocategorie si toccano per modificarle: la matita in alto
-                // vale per tutto il blocco, non solo per la riga su cui sta.
-                Chip(figlia.name, MaterialTheme.colorScheme.surfaceVariant) { onModifica(figlia) }
-            }
-            item {
-                Chip("+ Aggiungi", colore.copy(alpha = 0.20f), onAggiungiSotto)
+        AnimatedVisibility(visible = aperta) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 14.dp),
+            ) {
+                items(figlie, key = { it.id }) { figlia ->
+                    // Anche le sottocategorie si toccano per modificarle: la matita in
+                    // alto vale per la madre, non per tutto il blocco.
+                    Chip(figlia.name, MaterialTheme.colorScheme.surfaceVariant) { onModifica(figlia) }
+                }
+                item {
+                    Chip("+ Aggiungi voce", colore.copy(alpha = 0.20f), onAggiungiSotto)
+                }
             }
         }
     }
+}
+
+private fun quanteVoci(quante: Int): String = when (quante) {
+    0 -> "Nessuna voce"
+    1 -> "1 voce"
+    else -> "$quante voci"
 }
 
 @Composable

@@ -207,6 +207,9 @@ private val OPERATORI: Map<Char, Operazione> = Operazione.entries.associateBy { 
 @Composable
 fun ImportoGrande(stato: Digitazione, modifier: Modifier = Modifier) {
     val formula = stato.formula
+    // Lo zero di partenza è un segnaposto, non una cifra: scritto col colore pieno
+    // sembra un importo già inserito, e chi lo guarda cerca il modo di cancellarlo.
+    val ancoraNulla = stato.vuota && stato.parziale == null
     Column(modifier.fillMaxWidth()) {
         if (formula != null) {
             Text(
@@ -218,23 +221,25 @@ fun ImportoGrande(stato: Digitazione, modifier: Modifier = Modifier) {
             )
         }
         ImportoGrande(
-            if (formula == null) "${stato.testo()} €" else stato.importo.format(),
-            Modifier,
+            testo = if (formula == null) "${stato.testo()} €" else stato.importo.format(),
+            colore = if (ancoraNulla) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier,
         )
     }
 }
 
 @Composable
 fun ImportoGrande(importo: Money, modifier: Modifier = Modifier) {
-    ImportoGrande(importo.format(), modifier)
+    ImportoGrande(importo.format(), MaterialTheme.colorScheme.onSurface, modifier)
 }
 
 @Composable
-private fun ImportoGrande(testo: String, modifier: Modifier) {
+private fun ImportoGrande(testo: String, colore: Color, modifier: Modifier) {
     Text(
         testo,
         style = MaterialTheme.typography.displaySmall.tabular,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = colore,
         textAlign = TextAlign.Center,
         modifier = modifier.fillMaxWidth(),
     )

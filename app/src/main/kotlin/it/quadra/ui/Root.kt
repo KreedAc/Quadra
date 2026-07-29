@@ -161,7 +161,7 @@ fun Root(repository: LedgerRepository) {
                 FloatingActionButton(
                     onClick = { vista = vista.copy(sotto = Sotto.AGGIUNGI) },
                     containerColor = Color.Transparent,
-                    contentColor = Color(0xFF04121A),
+                    contentColor = extra.onBrand,
                     shape = forma,
                     // L'ombra di serie è nera e su fondo scuro non si vede. Questa è
                     // colorata come il pulsante: è quella che lo stacca dal fondo e gli

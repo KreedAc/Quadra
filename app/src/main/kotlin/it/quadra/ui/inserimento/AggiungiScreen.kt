@@ -12,7 +12,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,7 +44,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import it.quadra.core.input.Digitazione
 import it.quadra.core.model.Account
 import it.quadra.core.model.Category
@@ -142,6 +147,19 @@ fun AggiungiScreen(
     }
 }
 
+/**
+ * La griglia occupa lo schermo invece di appoggiarcisi sopra.
+ *
+ * Le caselle erano alte quanto la loro icona e restavano incollate in cima, con sotto
+ * mezza schermata di niente: la pagina sembrava incompiuta, e le categorie — che sono la
+ * cosa da toccare — finivano tutte lontano dal pollice. Qui l'altezza di una casella si
+ * ricava dallo spazio che c'è: le righe visibili si spartiscono la pagina, e quando le
+ * categorie sono poche le caselle smettono di crescere e la griglia si centra invece di
+ * diventare un manifesto.
+ *
+ * Cinque righe è il punto in cui una casella arriva al minimo leggibile: oltre, la
+ * griglia scorre, che è la ragione per cui resta pigra pur essendo quasi sempre corta.
+ */
 @Composable
 private fun PassoGriglia(
     categorie: List<Category>,
@@ -154,77 +172,118 @@ private fun PassoGriglia(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(14.dp))
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            gridItems(categorie, key = { it.id }) { categoria ->
-                Casella(categoria) { onScelta(categoria) }
+        Spacer(Modifier.height(12.dp))
+        BoxWithConstraints(Modifier.weight(1f)) {
+            val spazio = 9.dp
+            // La matita conta come una casella: sta in griglia, quindi occupa un posto.
+            val righe = (categorie.size + 1 + COLONNE - 1) / COLONNE
+            val visibili = righe.coerceIn(1, RIGHE_A_VISTA)
+            val altezza = ((maxHeight - spazio * (visibili - 1)) / visibili)
+                .coerceIn(ALTEZZA_MINIMA, ALTEZZA_MASSIMA)
+            // Quello che avanza quando le caselle hanno smesso di crescere si divide in
+            // due, così la griglia resta al centro invece di lasciare un vuoto sotto.
+            val occupato = altezza * visibili + spazio * (visibili - 1)
+            val margine = ((maxHeight - occupato) / 2).coerceAtLeast(0.dp)
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(COLONNE),
+                verticalArrangement = Arrangement.spacedBy(spazio),
+                horizontalArrangement = Arrangement.spacedBy(spazio),
+                contentPadding = PaddingValues(vertical = margine),
+            ) {
+                gridItems(categorie, key = { it.id }) { categoria ->
+                    Casella(categoria, altezza) { onScelta(categoria) }
+                }
+                // La matita sta qui, in coda alla griglia, e non solo nelle impostazioni:
+                // è guardando le proprie categorie che viene voglia di cambiarle, e chi
+                // non sa che si può fare non va a cercarlo in un altro posto.
+                item(key = "personalizza") { CasellaMatita(altezza, onPersonalizza) }
             }
-            // La matita sta qui, in coda alla griglia, e non solo nelle impostazioni:
-            // è guardando le proprie categorie che viene voglia di cambiarle, e chi non
-            // sa che si può fare non va a cercarlo in un altro posto.
-            item(key = "personalizza") { CasellaMatita(onPersonalizza) }
         }
     }
 }
 
+/** Quattro colonne: con tre i nomi ci stanno, ma servono due schermate per sedici voci. */
+private const val COLONNE = 4
+private const val RIGHE_A_VISTA = 5
+private val ALTEZZA_MINIMA = 78.dp
+private val ALTEZZA_MASSIMA = 116.dp
+
 @Composable
-private fun CasellaMatita(onClick: () -> Unit) {
+private fun CasellaMatita(altezza: Dp, onClick: () -> Unit) {
     val colore = MaterialTheme.colorScheme.onSurfaceVariant
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.clickable(onClick = onClick),
+    Corpo(
+        altezza = altezza,
+        sfondo = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        onClick = onClick,
     ) {
-        Box(
-            modifier = Modifier
-                .size(46.dp)
-                .clip(RoundedCornerShape(15.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icone.Matita, contentDescription = null, tint = colore, modifier = Modifier.size(20.dp))
+        Pastiglia(colore.copy(alpha = 0.16f)) {
+            Icon(Icone.Matita, contentDescription = null, tint = colore, modifier = Modifier.size(19.dp))
         }
-        Text(
-            "Modifica",
-            style = MaterialTheme.typography.labelSmall,
-            color = colore,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-        )
+        Etichetta("Modifica", colore)
+    }
+}
+
+/**
+ * Una categoria come tessera piena e non come icona sospesa.
+ *
+ * Il fondo colorato è quello che le dà un bordo da toccare: senza, il bersaglio del dito
+ * era l'icona, e fra una casella e l'altra c'era aria che sembrava cliccabile e non lo
+ * era.
+ */
+@Composable
+private fun Casella(categoria: Category, altezza: Dp, onClick: () -> Unit) {
+    val colore = Color(categoria.colorArgb)
+    Corpo(altezza = altezza, sfondo = colore.copy(alpha = 0.13f), onClick = onClick) {
+        Pastiglia(colore.copy(alpha = 0.22f)) {
+            Icon(iconFor(categoria.icon), contentDescription = null, tint = colore, modifier = Modifier.size(21.dp))
+        }
+        Etichetta(categoria.name, MaterialTheme.colorScheme.onSurface)
     }
 }
 
 @Composable
-private fun Casella(categoria: Category, onClick: () -> Unit) {
-    val colore = Color(categoria.colorArgb)
+private fun Corpo(
+    altezza: Dp,
+    sfondo: Color,
+    onClick: () -> Unit,
+    contenuto: @Composable ColumnScope.() -> Unit,
+) {
     Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(altezza)
+            .clip(RoundedCornerShape(19.dp))
+            .background(sfondo)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.clickable(onClick = onClick),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(46.dp)
-                .clip(RoundedCornerShape(15.dp))
-                .background(colore.copy(alpha = 0.22f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(iconFor(categoria.icon), contentDescription = null, tint = colore, modifier = Modifier.size(22.dp))
-        }
-        Text(
-            categoria.name,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+        verticalArrangement = Arrangement.Center,
+        content = contenuto,
+    )
+}
+
+@Composable
+private fun Pastiglia(sfondo: Color, contenuto: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(sfondo),
+        contentAlignment = Alignment.Center,
+        content = { contenuto() },
+    )
+}
+
+@Composable
+private fun Etichetta(testo: String, colore: Color) {
+    Spacer(Modifier.height(7.dp))
+    Text(
+        testo,
+        style = MaterialTheme.typography.labelSmall,
+        color = colore,
+        textAlign = TextAlign.Center,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        lineHeight = 12.sp,
+    )
 }
 
 @Composable
@@ -299,9 +358,20 @@ private fun PassoImporto(
             }
         }
 
-        ImportoGrande(digitato)
+        // L'importo prende tutto lo spazio che avanza e ci sta in mezzo.
+        //
+        // Prima lo spazio avanzato era un vuoto sotto la cifra, e la cifra restava in
+        // alto: la pagina aveva un buco esattamente dove va l'occhio mentre si digita.
+        // Al centro il numero è l'unica cosa fra la categoria e i tasti, che è quello
+        // che sta succedendo davvero.
+        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+            ImportoGrande(digitato)
+        }
 
         if (conti.size > 1) {
+            // I conti stanno appena sopra i tasti e non sotto la categoria: si scelgono
+            // dopo aver scritto la cifra, e stando qui il pollice non attraversa lo
+            // schermo per arrivarci.
             LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 items(conti, key = { it.id }) { c ->
                     val attivo = conto?.id == c.id
@@ -323,10 +393,6 @@ private fun PassoImporto(
             }
         }
 
-        // Lo spazio avanzato sta in mezzo: il tastierino e il salvataggio restano in
-        // basso, dove arriva il pollice, invece di galleggiare a metà schermo.
-        Spacer(Modifier.weight(1f))
-
         Tastierino(digitato) { digitato = it }
 
         val contoScelto = conto
@@ -345,7 +411,7 @@ private fun PassoImporto(
             Text(
                 "Salva",
                 style = MaterialTheme.typography.titleMedium,
-                color = if (abilitato) Color(0xFF04121A) else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (abilitato) extra.onBrand else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

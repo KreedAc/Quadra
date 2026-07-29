@@ -7,9 +7,13 @@ import androidx.lifecycle.viewModelScope
 import it.quadra.core.backup.Backup
 import it.quadra.core.backup.EsitoRipristino
 import it.quadra.data.LedgerRepository
+import it.quadra.ui.theme.Tema
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -21,6 +25,20 @@ class ImpostazioniViewModel(private val repository: LedgerRepository) : ViewMode
 
     private val _messaggio = MutableStateFlow<Messaggio?>(null)
     val messaggio: StateFlow<Messaggio?> = _messaggio
+
+    /**
+     * Il tema scelto.
+     *
+     * Chi lo applica è [it.quadra.MainActivity], che legge la stessa preferenza: qui
+     * serve soltanto a far vedere quale delle tre voci è accesa.
+     */
+    val tema: StateFlow<Tema> = repository.observePreferenza(Tema.CHIAVE)
+        .map { Tema.da(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Tema.SISTEMA)
+
+    fun impostaTema(scelto: Tema) {
+        viewModelScope.launch { repository.salvaPreferenza(Tema.CHIAVE, scelto.name) }
+    }
 
     /** Il nome proposto nel selettore: la data lo rende ordinabile e riconoscibile. */
     fun nomeFileProposto(): String = "quadra-${LocalDate.now()}.json"

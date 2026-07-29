@@ -65,6 +65,20 @@ class LedgerRepository(private val db: AppDatabase) {
             Ledger.totals(accounts, transactions)
         }
 
+    // ────────────────────────────────────────────────────────── preferenze
+
+    /**
+     * Una preferenza, osservata.
+     *
+     * Emette null finché la chiave non esiste, ed è quello che permette a chi legge di
+     * decidere il proprio valore predefinito invece di riceverne uno inventato qui.
+     */
+    fun observePreferenza(chiave: String): Flow<String?> = db.impostazioni().observe(chiave)
+
+    suspend fun salvaPreferenza(chiave: String, valore: String) {
+        db.impostazioni().scrivi(ImpostazioneEntity(chiave, valore))
+    }
+
     // ───────────────────────────────────────────────────────── scritture
 
     suspend fun add(

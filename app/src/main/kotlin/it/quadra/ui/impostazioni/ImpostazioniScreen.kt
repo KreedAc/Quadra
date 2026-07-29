@@ -31,11 +31,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.quadra.ui.Icone
+import it.quadra.ui.theme.Tema
 import it.quadra.ui.theme.extra
 
 /**
@@ -57,6 +60,7 @@ fun ImpostazioniScreen(
 ) {
     val context = LocalContext.current
     val messaggio by viewModel.messaggio.collectAsStateWithLifecycle()
+    val tema by viewModel.tema.collectAsStateWithLifecycle()
     var chiedeConferma by remember { mutableStateOf(false) }
 
     val salva = rememberLauncherForActivityResult(
@@ -111,6 +115,8 @@ fun ImpostazioniScreen(
                 )
             }
         }
+
+        item { Aspetto(tema, viewModel::impostaTema) }
 
         item {
             Riquadro {
@@ -210,6 +216,79 @@ fun ImpostazioniScreen(
                 }
             },
         )
+    }
+}
+
+/**
+ * Chiaro, scuro, o quello che dice il telefono.
+ *
+ * Le tre voci stanno tutte in vista invece che dentro un menù a tendina: sono tre, la
+ * scelta si fa una volta sola nella vita dell'app, e vederle tutte insieme risparmia
+ * il tocco che serve ad aprire per scoprire cosa c'è dentro.
+ *
+ * "Sistema" è la prima e resta il valore predefinito: chi ha già detto ad Android cosa
+ * preferisce non deve ripeterlo a ogni app che installa.
+ */
+@Composable
+private fun Aspetto(scelto: Tema, onScelta: (Tema) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icone.Luna,
+                contentDescription = null,
+                tint = extra.brandEnd,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.size(16.dp))
+            Column {
+                Text(
+                    "Aspetto",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Il tema scuro resta quello di casa, ma di giorno decidi tu",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(15.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Tema.entries.forEach { voce ->
+                val attivo = voce == scelto
+                Text(
+                    voce.etichetta,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (attivo) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (attivo) extra.brandEnd.copy(alpha = 0.20f) else Color.Transparent
+                        )
+                        .clickable { onScelta(voce) }
+                        .padding(vertical = 11.dp),
+                )
+            }
+        }
     }
 }
 

@@ -44,9 +44,75 @@ def dividi(testo):
     return pezzi
 
 
+CARATTERE = re.compile(r"'(\\u[0-9a-fA-F]{4}|\\.|[^'\\\n])'")
+
+
+def _scorri(testo, svuota_stringhe):
+    """Ripassa il sorgente una volta sola, sapendo sempre dentro cosa si trova.
+
+    Due passate indipendenti non possono funzionare, e non è teoria: `arrayOf("*/*")`
+    contiene l'apertura di un commento dentro una stringa, e chi toglie prima i commenti
+    si mangia tutto fino al `/**` successivo — cioè un pezzo di file scelto a caso, con
+    dentro le graffe che chiudevano quello che c'era prima. Il verso opposto sbaglia allo
+    stesso modo su una stringa nominata dentro un commento.
+
+    I ritorni a capo di quello che si toglie restano, così i numeri di riga continuano a
+    corrispondere al file vero.
+    """
+    pezzi = []
+    i, n = 0, len(testo)
+    while i < n:
+        due = testo[i:i + 2]
+        if due == "//":
+            fine = testo.find("\n", i)
+            i = n if fine < 0 else fine
+        elif due == "/*":
+            chiusura = testo.find("*/", i + 2)
+            # Un commento mai chiuso arriva a fine file: è come lo legge anche Kotlin.
+            fine = n if chiusura < 0 else chiusura + 2
+            pezzi.append("\n" * testo.count("\n", i, fine))
+            i = fine
+        elif testo.startswith('"""', i):
+            chiusura = testo.find('"""', i + 3)
+            fine = n if chiusura < 0 else chiusura + 3
+            if svuota_stringhe:
+                pezzi.append('""""""' + "\n" * testo.count("\n", i, fine))
+            else:
+                pezzi.append(testo[i:fine])
+            i = fine
+        elif testo[i] == '"':
+            j = i + 1
+            while j < n and testo[j] != '"' and testo[j] != "\n":
+                j += 2 if testo[j] == "\\" else 1
+            fine = j + 1 if j < n and testo[j] == '"' else j
+            pezzi.append('""' if svuota_stringhe else testo[i:fine])
+            i = fine
+        elif testo[i] == "`":
+            # Nome fra apici inversi: dentro c'è prosa, e nei test è prosa italiana.
+            # Va copiata com'è, ma senza guardarci dentro.
+            chiusura = testo.find("`", i + 1)
+            fine = i + 1 if chiusura < 0 else chiusura + 1
+            pezzi.append(testo[i:fine])
+            i = fine
+        elif testo[i] == "'":
+            # Solo la forma esatta di un carattere è un letterale. Un apostrofo in mezzo
+            # a una parola — "l'importo", "dell'anno" — è testo, e trattarlo come
+            # l'inizio di qualcosa si mangia il resto della riga con le sue graffe.
+            carattere = CARATTERE.match(testo, i)
+            if carattere:
+                pezzi.append("' '" if svuota_stringhe else carattere.group(0))
+                i = carattere.end()
+            else:
+                pezzi.append("'")
+                i += 1
+        else:
+            pezzi.append(testo[i])
+            i += 1
+    return "".join(pezzi)
+
+
 def senza_commenti(testo):
-    testo = re.sub(r"/\*.*?\*/", "", testo, flags=re.S)
-    return re.sub(r"//[^\n]*", "", testo)
+    return _scorri(testo, svuota_stringhe=False)
 
 
 def senza_stringhe(testo):
@@ -55,9 +121,7 @@ def senza_stringhe(testo):
     Serve al conteggio delle parentesi: una graffa dentro una stringa non apre niente,
     ma sbilancia il conto e produce un allarme su codice perfettamente valido.
     """
-    testo = re.sub(r'""".*?"""', '""""""', testo, flags=re.S)
-    testo = re.sub(r'"(\\.|[^"\\\n])*"', '""', testo)
-    return re.sub(r"'(\\.|[^'\\\n])'", "' '", testo)
+    return _scorri(testo, svuota_stringhe=True)
 
 
 def sbilanciamenti(testo):

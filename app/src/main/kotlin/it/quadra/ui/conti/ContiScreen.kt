@@ -436,12 +436,18 @@ private fun Intestazione(conto: Account, saldo: Money) {
 }
 
 /**
- * Tre azioni, non sei.
+ * Quattro azioni, in due pesi diversi.
  *
  * Manca "Preleva" perché prelevare al bancomat è un trasferimento verso i contanti: due
  * nomi per la stessa cosa costringono solo a scegliere ogni volta. E manca "Bilancio",
  * sostituito da "Allinea saldo", che invece di riscrivere il numero genera la differenza
  * come movimento.
+ *
+ * Erano quattro quadretti grigi identici, e quattro cose identiche non sono un menù: non
+ * dicono quale si usa tutti i giorni né cosa succede toccandole. Entrata e Trasferisci
+ * sono le due che si fanno spesso e stanno in alto, colorate; allineare e modificare
+ * capitano una volta ogni tanto e scendono a riga, con scritto cosa fanno — che è
+ * l'informazione che serve davvero prima di toccare "Allinea".
  */
 @Composable
 private fun Azioni(
@@ -451,15 +457,82 @@ private fun Azioni(
     onAllinea: () -> Unit,
     onModifica: () -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        Bottone(Icone.Su, "Entrata", extra.income, true, Modifier.weight(1f), onEntrata)
-        Bottone(Icone.Scambio, "Trasferisci", extra.brandEnd, trasferibile, Modifier.weight(1f), onTrasferisci)
-        Bottone(Icone.Spunta, "Allinea", extra.brandStart, true, Modifier.weight(1f), onAllinea)
-        Bottone(Icone.Matita, "Modifica", MaterialTheme.colorScheme.onSurfaceVariant, true, Modifier.weight(1f), onModifica)
+    Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
+        Tessera(
+            icona = Icone.Su,
+            titolo = "Entrata",
+            sottotitolo = "Stipendio, rimborso, regalo",
+            colore = extra.income,
+            abilitata = true,
+            modifier = Modifier.weight(1f),
+            onClick = onEntrata,
+        )
+        Tessera(
+            icona = Icone.Scambio,
+            titolo = "Trasferisci",
+            sottotitolo = if (trasferibile) "Sposta su un altro conto"
+            else "Serve almeno un altro conto",
+            colore = extra.brandEnd,
+            abilitata = trasferibile,
+            modifier = Modifier.weight(1f),
+            onClick = onTrasferisci,
+        )
     }
-    if (!trasferibile) {
+    RigaAzione(
+        icona = Icone.Spunta,
+        titolo = "Allinea il saldo",
+        sottotitolo = "Se la banca dice un altro numero, la differenza diventa un movimento",
+        colore = extra.brandStart,
+        onClick = onAllinea,
+    )
+    RigaAzione(
+        icona = Icone.Matita,
+        titolo = "Modifica il conto",
+        sottotitolo = "Nome, colore, icona — oppure eliminalo",
+        colore = MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = onModifica,
+    )
+}
+
+@Composable
+private fun Tessera(
+    icona: androidx.compose.ui.graphics.vector.ImageVector,
+    titolo: String,
+    sottotitolo: String,
+    colore: Color,
+    abilitata: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val tinta = if (abilitata) colore else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                if (abilitata) colore.copy(alpha = 0.13f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
+            .clickable(enabled = abilitata, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(tinta.copy(alpha = if (abilitata) 0.22f else 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icona, contentDescription = null, tint = tinta, modifier = Modifier.size(19.dp))
+        }
         Text(
-            "Per trasferire serve almeno un altro conto.",
+            titolo,
+            style = MaterialTheme.typography.titleMedium,
+            color = if (abilitata) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            sottotitolo,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -467,34 +540,41 @@ private fun Azioni(
 }
 
 @Composable
-private fun Bottone(
+private fun RigaAzione(
     icona: androidx.compose.ui.graphics.vector.ImageVector,
-    testo: String,
+    titolo: String,
+    sottotitolo: String,
     colore: Color,
-    abilitato: Boolean,
-    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(17.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(enabled = abilitato, onClick = onClick)
-            .padding(vertical = 14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(7.dp),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(13.dp),
     ) {
+        Icon(icona, contentDescription = null, tint = colore, modifier = Modifier.size(20.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                titolo,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                sottotitolo,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Icon(
-            icona,
+            Icone.Destra,
             contentDescription = null,
-            tint = if (abilitato) colore else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-            modifier = Modifier.size(22.dp),
-        )
-        Text(
-            testo,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(17.dp),
         )
     }
 }

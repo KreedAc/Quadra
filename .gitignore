@@ -12,3 +12,7 @@ captures/
 *.aab
 *.keystore
 !debug.keystore
+
+# Cache di Python degli script di controllo
+__pycache__/
+*.pyc
