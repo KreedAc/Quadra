@@ -1,0 +1,5 @@
+# Room riscrive gli schemi del database a ogni compilazione, sempre con avanzamento
+# riga in stile Unix. Senza questa riga Git li converte in stile Windows nella copia
+# di lavoro, la build successiva li riscrive com'erano, e ogni compilazione produce
+# quattro file "modificati" che nessuno ha toccato.
+app/schemas/**/*.json text eol=lf
