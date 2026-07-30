@@ -338,7 +338,7 @@ private fun Aspetto(scelto: Tema, onScelta: (Tema) -> Unit) {
  * donazione e diventa un acquisto, che Google obbliga a far passare dal suo sistema di
  * pagamento. E soprattutto tradirebbe il patto: l'app è intera per tutti.
  */
-private val DONAZIONE: String = ""
+private val DONAZIONE: String = "https://paypal.me/GiovanniAvignone"
 
 /**
  * Il pulsante apre il browser, non un pagamento.
