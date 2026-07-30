@@ -230,8 +230,8 @@ fun Root(repository: LedgerRepository) {
                             conti = stato.conti,
                             onChiudi = { vista = vista.copy(sotto = null) },
                             onPersonalizza = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
-                            onSalva = { importo, categoriaId, contoId ->
-                                movimentiVM.aggiungi(importo, categoriaId, contoId)
+                            onSalva = { importo, categoriaId, contoId, nota ->
+                                movimentiVM.aggiungi(importo, categoriaId, contoId, nota)
                                 vista = vista.copy(sotto = null)
                             },
                             modifier = Modifier.fillMaxSize().padding(insets),

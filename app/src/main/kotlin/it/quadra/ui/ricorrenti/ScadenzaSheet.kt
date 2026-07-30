@@ -142,6 +142,13 @@ fun ScadenzaSheet(
                 onConferma(digitato.importo)
             }
 
+            // Tre azioni, tre conseguenze diverse, tre colori.
+            //
+            // Erano due pulsanti grigi identici sotto uno verde, e grigio uguale grigio
+            // vuol dire "queste due cose sono la stessa cosa" — mentre una rimanda e
+            // l'altra cancella l'occorrenza. Il verde conferma, il blu sposta più in là,
+            // il rosso toglie di mezzo: sono gli stessi tre significati che i colori
+            // hanno già altrove nell'app, e vanno usati con la stessa costanza.
             if (rinvio) {
                 Text(
                     "Quando te lo richiedo",
@@ -149,26 +156,28 @@ fun ScadenzaSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 GrigliaFissa(voci = RINVII, colonne = 4, spazio = 7.dp) { giorni ->
+                    // Le scelte del rinvio prendono il colore del pulsante che le ha
+                    // aperte: si vede che sono la continuazione di quel gesto.
                     Text(
                         if (giorni == 1L) "Domani" else "$giorni giorni",
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = extra.brandStart,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(13.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(extra.brandStart.copy(alpha = 0.14f))
                             .clickable { onRimanda(giorni) }
                             .padding(vertical = 12.dp),
                     )
                 }
             } else {
-                Azione("Non l'ho ancora pagato", MaterialTheme.colorScheme.onSurfaceVariant) {
+                Azione("Non l'ho ancora pagato", extra.brandStart) {
                     rinvio = true
                 }
             }
 
-            Azione("Salta questa volta", MaterialTheme.colorScheme.onSurfaceVariant, onClick = onSalta)
+            Azione("Salta questa volta", MaterialTheme.colorScheme.error, onClick = onSalta)
 
             Text(
                 if (quanteAncora > 0) {

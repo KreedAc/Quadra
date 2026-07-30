@@ -134,6 +134,10 @@ val TAVOLOZZA: List<Int> = listOf(
 fun Tastierino(
     stato: Digitazione,
     modifier: Modifier = Modifier,
+    // Nei fogli i tasti restano compatti perché sopra c'è dell'altro che deve stare in
+    // schermo; a tutto schermo crescono, perché lì lo spazio c'è e un tasto più grande
+    // si sbaglia meno.
+    altezzaTasto: Dp = 46.dp,
     onCambia: (Digitazione) -> Unit,
 ) {
     // Gli operatori a sinistra, come sulle calcolatrici e come nelle app da cui la gente
@@ -150,7 +154,7 @@ fun Tastierino(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(46.dp)
+                            .height(altezzaTasto)
                             .clip(RoundedCornerShape(15.dp))
                             .background(
                                 if (operatore != null) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)

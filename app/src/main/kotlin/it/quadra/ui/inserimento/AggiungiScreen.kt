@@ -9,6 +9,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,9 +30,12 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +56,9 @@ import it.quadra.core.model.Account
 import it.quadra.core.model.Category
 import it.quadra.core.model.Money
 import it.quadra.ui.Icone
+import it.quadra.ui.common.Azione
+import it.quadra.ui.common.CampoTesto
+import it.quadra.ui.common.ContenutoFoglio
 import it.quadra.ui.common.ImportoGrande
 import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
@@ -82,7 +89,7 @@ fun AggiungiScreen(
     conti: List<Account>,
     onChiudi: () -> Unit,
     onPersonalizza: () -> Unit,
-    onSalva: (importo: Money, categoriaId: String, contoId: String) -> Unit,
+    onSalva: (importo: Money, categoriaId: String, contoId: String, nota: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var scelta by remember { mutableStateOf<Category?>(null) }
@@ -287,24 +294,45 @@ private fun Etichetta(testo: String, colore: Color) {
     )
 }
 
+/**
+ * Il secondo passo: quanto, su quale conto, con che nota.
+ *
+ * Lo spazio avanzato non è più un vuoto. Prima l'importo galleggiava al centro di una
+ * banda morta alta mezzo schermo, con sotto una striscia di pastiglie grigie per i conti
+ * che si tagliava al bordo — il settimo conto non si vedeva, e non si capiva nemmeno che
+ * ce ne fossero altri. Quello che riempie adesso non è imbottitura: due righe che dicono
+ * su quale conto stai registrando e cosa stai scrivendo, e i tasti più alti, che è la
+ * cosa che si tocca cinquanta volte al giorno.
+ *
+ * Conto e nota si aprono in un foglio invece che stare in linea. Per il conto perché
+ * un elenco lungo in orizzontale nasconde metà delle scelte; per la nota perché un campo
+ * di testo qui dentro tirerebbe su la tastiera di sistema proprio sopra il tastierino
+ * numerico, e i due si contenderebbero lo schermo. I due fogli hanno la stessa identica
+ * forma di tutti gli altri dell'app: quello che si apre dopo deve somigliare a quello da
+ * cui si è partiti, altrimenti ogni passaggio sembra un'app diversa.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PassoImporto(
     categoria: Category,
     sottocategorie: List<Category>,
     conti: List<Account>,
     onCambiaCategoria: () -> Unit,
-    onSalva: (Money, String, String) -> Unit,
+    onSalva: (Money, String, String, String) -> Unit,
 ) {
     val colore = tinta(categoria.colorArgb)
     var digitato by remember { mutableStateOf(Digitazione()) }
     var sottoscelta by remember { mutableStateOf<Category?>(null) }
     var conto by remember { mutableStateOf(conti.firstOrNull()) }
+    var nota by remember { mutableStateOf("") }
+    var scegliConto by remember { mutableStateOf(false) }
+    var scriviNota by remember { mutableStateOf(false) }
 
     val importo = digitato.importo
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp).padding(bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(13.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp).padding(bottom = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         // Intestazione: la categoria scelta, toccabile per tornare alla griglia.
         Row(
@@ -338,74 +366,63 @@ private fun PassoImporto(
         }
 
         if (sottocategorie.isNotEmpty()) {
+            // Contornate e nel colore della categoria, non grigie piene: una pastiglia
+            // grigia in mezzo ad altre pastiglie grigie non dice di essere toccabile, e
+            // qui la scelta è facoltativa — deve invitare, non mimetizzarsi.
             LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 items(sottocategorie, key = { it.id }) { sotto ->
                     val attiva = sottoscelta?.id == sotto.id
                     Text(
                         sotto.name,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (attiva) MaterialTheme.colorScheme.onSurface
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (attiva) MaterialTheme.colorScheme.onSurface else colore,
                         modifier = Modifier
                             .clip(RoundedCornerShape(99.dp))
-                            .background(
-                                if (attiva) colore.copy(alpha = 0.22f)
-                                else MaterialTheme.colorScheme.surfaceVariant
+                            .background(if (attiva) colore.copy(alpha = 0.22f) else Color.Transparent)
+                            .border(
+                                width = 1.5.dp,
+                                color = if (attiva) Color.Transparent else colore.copy(alpha = 0.45f),
+                                shape = RoundedCornerShape(99.dp),
                             )
                             .clickable { sottoscelta = if (attiva) null else sotto }
-                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                            .padding(horizontal = 14.dp, vertical = 9.dp),
                     )
                 }
             }
         }
 
-        // L'importo prende tutto lo spazio che avanza e ci sta in mezzo.
-        //
-        // Prima lo spazio avanzato era un vuoto sotto la cifra, e la cifra restava in
-        // alto: la pagina aveva un buco esattamente dove va l'occhio mentre si digita.
-        // Al centro il numero è l'unica cosa fra la categoria e i tasti, che è quello
-        // che sta succedendo davvero.
         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
             ImportoGrande(digitato)
         }
 
-        if (conti.size > 1) {
-            // I conti stanno appena sopra i tasti e non sotto la categoria: si scelgono
-            // dopo aver scritto la cifra, e stando qui il pollice non attraversa lo
-            // schermo per arrivarci.
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                items(conti, key = { it.id }) { c ->
-                    val attivo = conto?.id == c.id
-                    Text(
-                        c.name,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (attivo) MaterialTheme.colorScheme.onSurface
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(99.dp))
-                            .background(
-                                if (attivo) tinta(c.colorArgb).copy(alpha = 0.22f)
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .clickable { conto = c }
-                            .padding(horizontal = 12.dp, vertical = 7.dp),
-                    )
-                }
-            }
-        }
-
-        Tastierino(digitato) { digitato = it }
-
         val contoScelto = conto
+        Riga(
+            icona = iconFor(contoScelto?.icon),
+            accento = contoScelto?.let { tinta(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant,
+            etichetta = "Conto",
+            valore = contoScelto?.name ?: "Nessun conto",
+            onClick = { scegliConto = true },
+        )
+        Riga(
+            icona = Icone.Matita,
+            accento = MaterialTheme.colorScheme.onSurfaceVariant,
+            etichetta = "Nota",
+            valore = nota.ifBlank { "Facoltativa" },
+            spenta = nota.isBlank(),
+            onClick = { scriviNota = true },
+        )
+
+        Tastierino(digitato, altezzaTasto = 54.dp) { digitato = it }
+
         val abilitato = digitato.valido && contoScelto != null
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
+                .height(54.dp)
                 .clip(RoundedCornerShape(17.dp))
                 .background(if (abilitato) extra.brand else SolidColor(MaterialTheme.colorScheme.surfaceVariant))
                 .clickable(enabled = abilitato) {
-                    onSalva(importo, (sottoscelta ?: categoria).id, contoScelto!!.id)
+                    onSalva(importo, (sottoscelta ?: categoria).id, contoScelto!!.id, nota.trim())
                 },
             contentAlignment = Alignment.Center,
         ) {
@@ -414,6 +431,110 @@ private fun PassoImporto(
                 style = MaterialTheme.typography.titleMedium,
                 color = if (abilitato) extra.onBrand else MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+
+    if (scegliConto) {
+        ModalBottomSheet(
+            onDismissRequest = { scegliConto = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            ContenutoFoglio(spazio = 8.dp) {
+                Text(
+                    "Con che cosa hai pagato",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                conti.forEach { c ->
+                    val suo = tinta(c.colorArgb)
+                    Riga(
+                        icona = iconFor(c.icon),
+                        accento = suo,
+                        etichetta = c.name,
+                        valore = "",
+                        scelta = c.id == conto?.id,
+                        onClick = { conto = c; scegliConto = false },
+                    )
+                }
+            }
+        }
+    }
+
+    if (scriviNota) {
+        ModalBottomSheet(
+            onDismissRequest = { scriviNota = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            ContenutoFoglio(spazio = 14.dp) {
+                Text(
+                    "Una nota, se serve",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                CampoTesto(nota, "Per esempio: cena con Marco") { nota = it }
+                Azione("Fatto", extra.brandEnd) { scriviNota = false }
+            }
+        }
+    }
+}
+
+/**
+ * Una riga toccabile: pastiglia con l'icona, etichetta, valore.
+ *
+ * La stessa forma per il conto e per la nota, e la stessa dentro il foglio che si apre:
+ * chi tocca "Conto" ritrova esattamente l'oggetto che ha toccato, moltiplicato per il
+ * numero di conti. È quello che rende la finestra che si apre la continuazione di quella
+ * di prima invece di una schermata nuova.
+ */
+@Composable
+private fun Riga(
+    icona: androidx.compose.ui.graphics.vector.ImageVector,
+    accento: Color,
+    etichetta: String,
+    valore: String,
+    spenta: Boolean = false,
+    scelta: Boolean = false,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (scelta) accento.copy(alpha = 0.14f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(11.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(30.dp).clip(RoundedCornerShape(10.dp))
+                .background(accento.copy(alpha = 0.20f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icona, contentDescription = null, tint = accento, modifier = Modifier.size(16.dp))
+        }
+        Text(
+            etichetta,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            valore,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (spenta) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        if (scelta) {
+            Icon(Icone.Spunta, contentDescription = null, tint = accento, modifier = Modifier.size(17.dp))
         }
     }
 }
