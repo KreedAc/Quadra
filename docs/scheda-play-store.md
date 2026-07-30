@@ -10,6 +10,24 @@ Da copiare e incollare nella Console. I limiti di caratteri sono quelli di Googl
 Quadra — Spese personali
 ```
 
+24 caratteri. Non è solo estetica: "Quadra" da solo è un nome usato da altri in Italia,
+software compreso, e qualificarlo con il proprio settore merceologico è il modo in cui la
+convivenza fra segni omonimi funziona in pratica. Non va abbreviato in "Quadra" e basta.
+
+Sotto l'icona sul telefono resta invece **Quadra** e basta, perché è il nome dell'app nel
+lanciatore e i nomi lunghi vengono troncati con i puntini. Sono due campi diversi: questo
+sta nella Console, quello sta in `app/src/main/res/values/strings.xml`.
+
+## Nome dello sviluppatore
+
+```
+Quadra Lab
+```
+
+Campo separato, compare sotto ogni app pubblicata dall'account. È il posto giusto per
+"Quadra Lab": identifica chi fa le app, non un prodotto in una categoria affollata, e te
+lo porti sui progetti futuri.
+
 ## Descrizione breve (max 80)
 
 Compare sotto il nome nei risultati di ricerca. È la riga che decide se uno tocca o
@@ -114,9 +132,12 @@ c'è pubblicità.
 - **Contiene annunci**: No
 - **Acquisti in-app**: No — la donazione, se attivata, è un link esterno senza
   contropartita, quindi non è un acquisto in-app
-- **URL informativa privacy**: `https://<utente>.github.io/<repo>/privacy.html`
-- **Sito web**: `https://<utente>.github.io/<repo>/`
+- **URL informativa privacy**: `https://kreedac.github.io/Quadra/privacy.html`
+- **Sito web**: `https://kreedac.github.io/Quadra/`
 - **Pubblico di destinazione**: adulti, 18+
+- **ID applicazione**: `io.github.kreedac.quadra` — assegnato al primo caricamento e
+  immutabile per sempre. Controllare che sia questo, e non `it.quadra`, prima di
+  premere invio.
 
 ## Materiale grafico da preparare
 

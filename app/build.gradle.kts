@@ -27,7 +27,17 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "it.quadra"
+        // Lo spazio dei nomi di chi pubblica, non di chi si chiama così.
+        //
+        // Era `it.quadra`, che secondo la convenzione del DNS invertito dichiara di
+        // possedere il dominio quadra.it — cosa non vera, e con altri "Quadra" attivi in
+        // Italia è anche la parte più facile da leggere come appropriazione. Questo
+        // invece corrisponde a un profilo GitHub che è davvero nostro.
+        //
+        // Non ha niente a che vedere con i package del codice, che restano `it.quadra.*`:
+        // sono due cose indipendenti. E dopo la prima pubblicazione non si cambia più,
+        // perché cambiarlo significa pubblicare un'altra app.
+        applicationId = "io.github.kreedac.quadra"
         // API 26 copre praticamente tutto il parco installato e porta java.time
         // nativo, quindi niente desugaring da configurare.
         minSdk = 26
