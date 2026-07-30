@@ -20,13 +20,9 @@ sta nella Console, quello sta in `app/src/main/res/values/strings.xml`.
 
 ## Nome dello sviluppatore
 
-```
-Quadra Lab
-```
-
-Campo separato, compare sotto ogni app pubblicata dall'account. È il posto giusto per
-"Quadra Lab": identifica chi fa le app, non un prodotto in una categoria affollata, e te
-lo porti sui progetti futuri.
+Già impostato sull'account come **kreedac lab**. Va bene così: è un campo separato, che
+compare sotto ogni app pubblicata, e non ha nessun effetto sulla scheda. Cambiarlo adesso
+non servirebbe a niente.
 
 ## Descrizione breve (max 80)
 
@@ -139,14 +135,63 @@ c'è pubblicità.
   immutabile per sempre. Controllare che sia questo, e non `it.quadra`, prima di
   premere invio.
 
-## Materiale grafico da preparare
+## Materiale grafico — è già pronto
 
-| Cosa | Formato |
-|---|---|
-| Icona | 512 × 512 PNG |
-| Grafica in evidenza | 1024 × 500 |
-| Screenshot telefono | almeno 2, meglio 4-6 |
+Tutto in `docs/grafica/`, nelle misure giuste e con i rapporti che Google accetta.
 
-Per gli screenshot userei, in quest'ordine: Movimenti (la schermata principale con la
-scheda del mese), l'inserimento con il tastierino e un'operazione in corso, Statistiche,
-Conti. Uno chiaro e uno scuro fanno capire subito che ci sono entrambi.
+| Cosa | File | Misura |
+|---|---|---|
+| Icona | `quadra-icona-512.png` | 512 × 512 |
+| Grafica in evidenza | `quadra-feature-1024x500.png` | 1024 × 500 |
+| Screenshot 1 | `play-1-movimenti-chiaro.png` | 1200 × 2200 |
+| Screenshot 2 | `play-2-conti-chiaro.png` | 1200 × 2200 |
+| Screenshot 3 | `play-3-movimenti-scuro.png` | 1200 × 2200 |
+| Screenshot 4 | `play-4-conti-scuro.png` | 1200 × 2200 |
+
+Gli screenshot vanno caricati in ordine numerico: il primo è quello che si vede senza
+scorrere, e porta la promessa principale. Le schermate grezze del telefono non sono
+caricabili così come sono — rapporto 2,225 contro il 2:1 massimo — e vanno rimontate con
+`docs/grafica/scatto.js`.
+
+---
+
+# La sequenza nella Console
+
+## 1. Crea l'app
+Nome `Quadra — Spese personali`, italiano come lingua predefinita, **App**, **Gratuita**.
+L'app gratuita non si può convertire in a pagamento dopo: qui è quello che vogliamo.
+
+## 2. Configura l'app (l'elenco di voci da spuntare)
+- **Norme sulle app e contenuti** → il questionario contenuti, dichiarazione pubblico di
+  destinazione (adulti), nessun annuncio
+- **Sicurezza dei dati** → nessun dato raccolto, nessuno condiviso (tabella sopra)
+- **Accesso all'app** → tutte le funzionalità sono disponibili senza restrizioni: non
+  serve nessuna credenziale di prova, perché non esiste login
+- **Annunci** → No
+- **App di finanza** → è una categoria che Google interroga a parte: Quadra **non** è
+  un'app bancaria, non gestisce pagamenti, non fa credito né criptovalute. È un
+  registratore di spese personali. Rispondere di conseguenza a ogni voce.
+
+## 3. Scheda del negozio principale
+Nome, descrizione breve, descrizione completa, icona, grafica in evidenza, screenshot,
+URL informativa privacy, sito web, email di contatto.
+
+## 4. Test interno
+Crea la versione, carica l'`.aab`, aggiungi le email dei tester. È immediato, non passa
+da revisione, e ti fa provare l'installazione dallo store per davvero.
+
+## 5. Produzione
+Solo quando il test interno ti convince. Da lì parte la revisione di Google, che per una
+prima pubblicazione può richiedere qualche giorno.
+
+---
+
+# Comandi
+
+```
+gradlew.bat :app:bundleRelease     → app\build\outputs\bundle\release\app-release.aab
+gradlew.bat :app:assembleRelease   → app\build\outputs\apk\release\app-release.apk
+```
+
+Il primo è quello da caricare sulla Console. Il secondo serve solo a passare l'app a
+qualcuno a mano.
