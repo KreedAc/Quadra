@@ -104,6 +104,11 @@ data class StatoMovimenti(
      * "Spesa" sotto — occuperebbe una riga per non dire niente.
      */
     fun sottotitolo(movimento: Transaction): String {
+        // Il titolo di un trasferimento dice già da dove a dove: sotto ci andrebbe la
+        // categoria tecnica ("Rettifiche e giroconti") e uno solo dei due conti, che
+        // adesso che la riga è una sembrerebbe l'unico coinvolto.
+        if (movimento.isTransfer) return "Trasferimento"
+
         val categoria = categoria(movimento.categoryId)
         val contesto = if (movimento.description.isNotBlank()) {
             categoria?.name
@@ -281,8 +286,40 @@ class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel()
             .map { (data, delGiorno) ->
                 Giornata(
                     data = data,
-                    movimenti = delGiorno,
+                    movimenti = unaRigaPerTrasferimento(delGiorno),
+                    // Il totale si calcola sui movimenti veri, non su quelli mostrati:
+                    // sono due cose diverse e confonderle è il modo di far comparire
+                    // numeri che non tornano. (Qui non cambia nulla, perché i
+                    // trasferimenti sono già fuori dallo speso, ma la distinzione va
+                    // tenuta comunque.)
                     totale = Ledger.totalSpent(delGiorno),
                 )
             }
+
+    /**
+     * Un trasferimento occupa una riga sola.
+     *
+     * Sotto ci sono sempre due movimenti — i soldi escono da un conto ed entrano in un
+     * altro — e devono restare due, altrimenti i saldi non tornano. Ma in elenco erano
+     * due righe identiche, con lo stesso nome e lo stesso importo, e tre giroconti
+     * riempivano mezza giornata senza dire niente di più di uno.
+     *
+     * Sopravvive la gamba in uscita, non quella in entrata. Non è indifferente: quella
+     * in entrata è positiva, e in questa lista il verde vuol dire "sono arrivati dei
+     * soldi". Un trasferimento mostrato in verde farebbe sembrare guadagno lo spostare
+     * denaro che si aveva già — mentre quella in uscita è già neutra, ed è anche il
+     * verso in cui l'operazione è stata pensata da chi l'ha fatta.
+     *
+     * Nasconde l'entrata solo se trova la sua uscita: una gamba orfana, che può esistere
+     * solo per un archivio manomesso, resta visibile invece di sparire in silenzio.
+     */
+    private fun unaRigaPerTrasferimento(movimenti: List<Transaction>): List<Transaction> {
+        val conUscita = movimenti
+            .filter { it.isTransfer && !it.isIncome }
+            .mapNotNull { it.transferGroupId }
+            .toSet()
+        return movimenti.filterNot {
+            it.isTransfer && it.isIncome && it.transferGroupId in conUscita
+        }
+    }
 }
