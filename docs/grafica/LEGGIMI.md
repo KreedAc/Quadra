@@ -24,3 +24,16 @@ Serve Node con Playwright e un Chromium installato:
     node rendi.js
 
 Il percorso del browser è scritto dentro `rendi.js` e va adattato alla propria macchina.
+
+## Screenshot
+
+`play-*.png` — quattro schermate 1200 × 2200, da caricare in ordine numerico.
+
+Le schermate grezze del telefono sono 1200 × 2670, cioè rapporto **2,225**: Google ne
+accetta al massimo **2:1**, quindi caricate così com'erano verrebbero rifiutate. Non è
+l'unica ragione per rimontarle — la barra di stato mostra ora, batteria e le notifiche
+di chi ha fatto lo scatto, che non raccontano l'app e non riguardano nessuno.
+
+`scatto.js` prende i file grezzi da `scatti/`, taglia la barra di stato e li monta su una
+tela conforme con la didascalia. Per rifarli con schermate nuove: sostituisci i file in
+`scatti/`, aggiorna le didascalie in cima allo script e rilancia `node scatto.js`.
