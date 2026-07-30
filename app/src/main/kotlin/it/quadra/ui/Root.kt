@@ -228,6 +228,7 @@ fun Root(repository: LedgerRepository) {
                             categorie = stato.categoriePrincipali,
                             tutteLeCategorie = stato.categorie,
                             conti = stato.conti,
+                            saldi = stato.saldi,
                             onChiudi = { vista = vista.copy(sotto = null) },
                             onPersonalizza = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
                             onSalva = { importo, categoriaId, contoId, nota ->

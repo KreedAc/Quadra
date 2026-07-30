@@ -175,6 +175,14 @@ object Icone {
         "M21.6 9.2h-4.4a2.4 2.4 0 0 0 0 4.8h4.4Z",
     )
 
+    /** Banconote: il conto dei contanti non è una carta, e non deve sembrarlo. */
+    val Contanti = tratto(
+        "contanti",
+        "M4.6 6.4h14.8a2.2 2.2 0 0 1 2.2 2.2v6.8a2.2 2.2 0 0 1-2.2 2.2H4.6" +
+            "a2.2 2.2 0 0 1-2.2-2.2V8.6a2.2 2.2 0 0 1 2.2-2.2Z",
+        cerchio(12f, 12f, 2.3f),
+    )
+
     val Carta = tratto(
         "carta",
         "M3.4 5.4h17.2a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2H3.4a2 2 0 0 1-2-2V7.4a2 2 0 0 1 2-2Z",
@@ -285,6 +293,7 @@ fun iconFor(key: String?): ImageVector = when (key) {
     "pets" -> Icone.Animali
     "child" -> Icone.Famiglia
     "gift" -> Icone.Regalo
+    "cash" -> Icone.Contanti
     "wallet" -> Icone.Portafoglio
     "credit_card" -> Icone.Carta
     "bank" -> Icone.Banca
@@ -296,6 +305,6 @@ fun iconFor(key: String?): ImageVector = when (key) {
 /** Le chiavi disponibili quando l'utente sceglie l'icona di una categoria. */
 val ICONE_SCEGLIBILI: List<String> = listOf(
     "cart", "coffee", "restaurant", "car", "fuel", "building", "bolt", "pill",
-    "bag", "ticket", "receipt", "pets", "child", "gift", "wallet", "credit_card",
+    "bag", "ticket", "receipt", "pets", "child", "gift", "cash", "wallet", "credit_card",
     "bank", "savings",
 )

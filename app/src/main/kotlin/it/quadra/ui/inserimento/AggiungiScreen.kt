@@ -63,6 +63,7 @@ import it.quadra.ui.common.ImportoGrande
 import it.quadra.ui.common.Tastierino
 import it.quadra.ui.iconFor
 import it.quadra.ui.theme.extra
+import it.quadra.ui.theme.tabular
 import it.quadra.ui.theme.tinta
 
 /**
@@ -87,6 +88,7 @@ fun AggiungiScreen(
     categorie: List<Category>,
     tutteLeCategorie: List<Category>,
     conti: List<Account>,
+    saldi: Map<String, Money>,
     onChiudi: () -> Unit,
     onPersonalizza: () -> Unit,
     onSalva: (importo: Money, categoriaId: String, contoId: String, nota: String) -> Unit,
@@ -147,6 +149,7 @@ fun AggiungiScreen(
                         .filter { it.parentId == selezionata.id }
                         .sortedBy { it.sortOrder },
                     conti = conti,
+                    saldi = saldi,
                     onCambiaCategoria = { scelta = null },
                     onSalva = onSalva,
                 )
@@ -317,6 +320,7 @@ private fun PassoImporto(
     categoria: Category,
     sottocategorie: List<Category>,
     conti: List<Account>,
+    saldi: Map<String, Money>,
     onCambiaCategoria: () -> Unit,
     onSalva: (Money, String, String, String) -> Unit,
 ) {
@@ -400,15 +404,19 @@ private fun PassoImporto(
             icona = iconFor(contoScelto?.icon),
             accento = contoScelto?.let { tinta(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant,
             etichetta = "Conto",
-            valore = contoScelto?.name ?: "Nessun conto",
+            titolo = contoScelto?.name ?: "Nessun conto",
+            // Il saldo si legge qui e non dopo aver salvato: sapere che su quella carta
+            // ci sono nove euro cambia con quale si paga, ed è l'unico momento in cui
+            // quell'informazione serve a decidere qualcosa.
+            dettaglio = contoScelto?.let { saldi[it.id]?.format() },
             onClick = { scegliConto = true },
         )
         Riga(
             icona = Icone.Matita,
             accento = MaterialTheme.colorScheme.onSurfaceVariant,
             etichetta = "Nota",
-            valore = nota.ifBlank { "Facoltativa" },
-            spenta = nota.isBlank(),
+            titolo = nota.ifBlank { "Facoltativa" },
+            spento = nota.isBlank(),
             onClick = { scriviNota = true },
         )
 
@@ -447,12 +455,11 @@ private fun PassoImporto(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 conti.forEach { c ->
-                    val suo = tinta(c.colorArgb)
                     Riga(
                         icona = iconFor(c.icon),
-                        accento = suo,
-                        etichetta = c.name,
-                        valore = "",
+                        accento = tinta(c.colorArgb),
+                        titolo = c.name,
+                        dettaglio = saldi[c.id]?.format(),
                         scelta = c.id == conto?.id,
                         onClick = { conto = c; scegliConto = false },
                     )
@@ -481,20 +488,25 @@ private fun PassoImporto(
 }
 
 /**
- * Una riga toccabile: pastiglia con l'icona, etichetta, valore.
+ * Una riga toccabile: pastiglia con l'icona, testo, dettaglio a destra.
  *
- * La stessa forma per il conto e per la nota, e la stessa dentro il foglio che si apre:
- * chi tocca "Conto" ritrova esattamente l'oggetto che ha toccato, moltiplicato per il
- * numero di conti. È quello che rende la finestra che si apre la continuazione di quella
- * di prima invece di una schermata nuova.
+ * La stessa forma per il conto, per la nota e per ogni voce del foglio che si apre: chi
+ * tocca "Conto" ritrova esattamente l'oggetto che ha toccato, moltiplicato per il numero
+ * di conti. È quello che rende la finestra che si apre la continuazione di quella di
+ * prima invece di una schermata nuova.
+ *
+ * [titolo] è sempre il testo che conta e si legge pieno; [etichetta] è il grigio che lo
+ * precede quando serve dire di che campo si tratta. Nel foglio dei conti l'etichetta non
+ * c'è, perché il nome del conto non ha bisogno di essere presentato.
  */
 @Composable
 private fun Riga(
     icona: androidx.compose.ui.graphics.vector.ImageVector,
     accento: Color,
-    etichetta: String,
-    valore: String,
-    spenta: Boolean = false,
+    titolo: String,
+    etichetta: String? = null,
+    dettaglio: String? = null,
+    spento: Boolean = false,
     scelta: Boolean = false,
     onClick: () -> Unit,
 ) {
@@ -518,21 +530,31 @@ private fun Riga(
         ) {
             Icon(icona, contentDescription = null, tint = accento, modifier = Modifier.size(16.dp))
         }
+        if (etichetta != null) {
+            Text(
+                etichetta,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Text(
-            etichetta,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            valore,
+            titolo,
             style = MaterialTheme.typography.bodyLarge,
-            color = if (spenta) MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (spento) MaterialTheme.colorScheme.onSurfaceVariant
             else MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.End,
+            textAlign = if (etichetta != null) TextAlign.End else TextAlign.Start,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
+        if (dettaglio != null) {
+            Text(
+                dettaglio,
+                style = MaterialTheme.typography.bodyMedium.tabular,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
         if (scelta) {
             Icon(Icone.Spunta, contentDescription = null, tint = accento, modifier = Modifier.size(17.dp))
         }

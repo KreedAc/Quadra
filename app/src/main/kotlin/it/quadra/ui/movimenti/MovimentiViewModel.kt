@@ -43,6 +43,8 @@ data class StatoMovimenti(
     val speso: Money = Money.ZERO,
     val categorie: List<Category> = emptyList(),
     val conti: List<Account> = emptyList(),
+    /** Il saldo di ogni conto, per dirlo mentre si sceglie con cosa si è pagato. */
+    val saldi: Map<String, Money> = emptyMap(),
     val caricato: Boolean = false,
     val striscia: List<GiornoStriscia> = emptyList(),
     val giornoScelto: LocalDate? = null,
@@ -125,6 +127,7 @@ private data class Contorno(
     val totali: Totals,
     val regole: List<RecurringRule>,
     val registrate: Set<String>,
+    val saldi: Map<String, Money>,
 )
 
 /** Movimento appena cancellato, in attesa che scada la finestra per annullare. */
@@ -149,7 +152,8 @@ class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel()
             repository.observeTotals(),
             repository.observeRecurring(),
             repository.observeScadenzeRegistrate(),
-        ) { g, totali, regole, registrate -> Contorno(g, totali, regole, registrate) },
+            repository.observeBalances(),
+        ) { g, totali, regole, registrate, saldi -> Contorno(g, totali, regole, registrate, saldi) },
     ) { meseCorrente, movimenti, categorie, conti, contorno ->
         val giornate = raggruppaPerGiorno(movimenti)
         val speso = Ledger.totalSpent(movimenti)
@@ -161,6 +165,7 @@ class MovimentiViewModel(private val repository: LedgerRepository) : ViewModel()
             speso = speso,
             categorie = categorie,
             conti = conti,
+            saldi = contorno.saldi,
             caricato = true,
             striscia = striscia(meseCorrente, giornate),
             giornoScelto = contorno.giorno,
