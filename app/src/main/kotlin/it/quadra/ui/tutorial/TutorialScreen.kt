@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
@@ -130,6 +131,11 @@ fun TutorialScreen(onFine: () -> Unit, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            // Il tutorial è disegnato sopra tutto, fuori dallo Scaffold, quindi non
+            // riceve i suoi margini: senza questa riga "Cominciamo" finisce sotto la
+            // barra di navigazione di sistema e "Salta" dietro l'orologio. Vale per
+            // tutti i bordi occupati dal sistema, ritaglio dello schermo compreso.
+            .safeDrawingPadding()
             .padding(horizontal = 26.dp),
     ) {
         // "Salta" resta sempre in vista, anche sull'ultima scheda. Un'uscita che

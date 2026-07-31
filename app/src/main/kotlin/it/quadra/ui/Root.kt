@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -34,6 +35,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -87,6 +89,9 @@ private enum class Sotto { CATEGORIE, RICORRENTI, AGGIUNGI }
  * deve andare ai conti, non muovere l'evidenziazione lasciando la stessa pagina.
  */
 private data class Vista(val scheda: Destinazione, val sotto: Sotto? = null)
+
+/** Oltre questa larghezza il contenuto non si allarga più: si centra. Vedi [Root]. */
+private val LARGHEZZA_MASSIMA = 560.dp
 
 /** Fabbrica minima: evita di ripetere l'oggetto anonimo a ogni ViewModel. */
 class Fabbrica<T : ViewModel>(private val costruisci: () -> T) : ViewModelProvider.Factory {
@@ -203,12 +208,30 @@ fun Root(repository: LedgerRepository) {
                 }
             },
         ) { insets ->
+            // La colonna sta al centro; la barra di navigazione resta larga quanto lo
+            // schermo, perché è del dispositivo e non del contenuto.
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
             AnimatedContent(
                 targetState = vista,
                 transitionSpec = { transizione(initialState, targetState) },
                 label = "vista",
             ) { corrente ->
-                val contenuto = Modifier.fillMaxSize().padding(insets)
+                // Su tablet il contenuto smette di allargarsi e si centra.
+                //
+                // Senza un limite una riga di movimento si stira per mille punti, con il
+                // nome a sinistra, l'importo a destra e in mezzo un vuoto che l'occhio
+                // deve attraversare a ogni riga; il tastierino diventa una tastiera da
+                // pianoforte e la griglia delle categorie quattro riquadri enormi. Non è
+                // questione di gusto: una riga lunga il doppio del comodo si legge
+                // peggio, ed è la ragione per cui i giornali hanno le colonne.
+                //
+                // 560 punti sono poco più di un telefono grande, cioè la misura per cui
+                // ogni schermata è stata disegnata. Sotto quella soglia — cioè su tutti
+                // i telefoni — queste righe non fanno assolutamente niente.
+                val contenuto = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = LARGHEZZA_MASSIMA)
+                    .padding(insets)
                 when (corrente.sotto) {
                     Sotto.CATEGORIE -> CategorieScreen(
                         viewModel = categorieVM,
@@ -253,6 +276,7 @@ fun Root(repository: LedgerRepository) {
                         )
                     }
                 }
+            }
             }
         }
 

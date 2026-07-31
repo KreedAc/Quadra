@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -174,7 +175,7 @@ fun DettaglioSheet(
                 )
             }
 
-            Voce("Quando", etichettaData(data), apertura == Apertura.DATA) {
+            Voce("Quando", etichettaData(data), apertura == Apertura.DATA, ultima = true) {
                 apertura = if (apertura == Apertura.DATA) Apertura.NESSUNA else Apertura.DATA
             }
             Pannello(apertura == Apertura.DATA) {
@@ -240,7 +241,14 @@ private fun Intestazione(
 
 /** Una riga "etichetta — valore" che si apre sul pannello corrispondente. */
 @Composable
-private fun Voce(etichetta: String, valore: String, aperta: Boolean, onTocca: () -> Unit) {
+private fun Voce(
+    etichetta: String,
+    valore: String,
+    aperta: Boolean,
+    ultima: Boolean = false,
+    onTocca: () -> Unit,
+) {
+  Column {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -274,6 +282,18 @@ private fun Voce(etichetta: String, valore: String, aperta: Boolean, onTocca: ()
             modifier = Modifier.size(18.dp),
         )
     }
+    // Le voci erano quattro righe separate solo dall'aria, e senza un segno l'occhio
+    // non capisce dove finisce una e comincia l'altra: sembrava un elenco allentato
+    // invece di quattro campi. Il filo è lo stesso dei movimenti e dei conti, e
+    // sparisce quando la voce è aperta perché lì il confine lo fa già il pannello.
+    if (!ultima && !aperta) {
+        HorizontalDivider(
+            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant,
+            modifier = Modifier.padding(horizontal = 14.dp),
+        )
+    }
+  }
 }
 
 /** Il pannello che si apre sotto una voce, con l'altezza che cresce invece di saltare. */

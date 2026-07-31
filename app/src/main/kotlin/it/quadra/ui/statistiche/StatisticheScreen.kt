@@ -1,6 +1,9 @@
 package it.quadra.ui.statistiche
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,16 +18,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -36,16 +45,18 @@ import it.quadra.core.statistics.CategoryTotal
 import it.quadra.core.statistics.MonthTotal
 import it.quadra.core.statistics.Statistics
 import it.quadra.data.LedgerRepository
+import it.quadra.ui.Icone
 import it.quadra.ui.theme.extra
 import it.quadra.ui.theme.tabular
 import it.quadra.ui.theme.tinta
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 private val formatoMeseCorto = DateTimeFormatter.ofPattern("MMM", Locale.ITALIAN)
 
@@ -55,6 +66,8 @@ data class StatoStatistiche(
     val mediaGiornaliera: Money = Money.ZERO,
     val perMese: List<MonthTotal> = emptyList(),
     val perCategoria: List<CategoryTotal> = emptyList(),
+    /** Le voci dentro ogni famiglia, per la riga che si apre. Calcolate una volta sola. */
+    val dentroCategoria: Map<String, List<CategoryTotal>> = emptyMap(),
     val entrato: Money = Money.ZERO,
     val entratePerVoce: List<CategoryTotal> = emptyList(),
     val categorie: List<Category> = emptyList(),
@@ -76,12 +89,20 @@ class StatisticheViewModel(repository: LedgerRepository) : ViewModel() {
         val radice = { id: String -> indice[id]?.parentId ?: id }
 
         val delMese = movimenti.filter { YearMonth.from(it.date) == mese }
+        val famiglie = Statistics.byRootCategory(delMese, radice)
+        // La scomposizione si calcola qui e non al tocco: sono poche decine di movimenti,
+        // e farla in composizione significherebbe rifare il conto a ogni ridisegno.
+        val dentro = famiglie.associate { famiglia ->
+            famiglia.categoryId to Statistics.bySubcategory(delMese, famiglia.categoryId, radice)
+        }
+
         StatoStatistiche(
             mese = mese,
             speso = Ledger.totalSpent(delMese),
             mediaGiornaliera = Statistics.dailyAverage(movimenti, mese),
             perMese = Statistics.monthlySpending(movimenti, Statistics.lastMonths(mese, 6)),
-            perCategoria = Statistics.byRootCategory(delMese, radice),
+            perCategoria = famiglie,
+            dentroCategoria = dentro,
             entrato = Statistics.totalIncome(delMese),
             entratePerVoce = Statistics.incomeByCategory(delMese),
             categorie = categorie,
@@ -99,6 +120,9 @@ class StatisticheViewModel(repository: LedgerRepository) : ViewModel() {
 @Composable
 fun StatisticheScreen(viewModel: StatisticheViewModel, modifier: Modifier = Modifier) {
     val stato by viewModel.stato.collectAsStateWithLifecycle()
+    // Una famiglia aperta alla volta: aprirne cinque riempirebbe la pagina di barre
+    // sottili in cui non si distingue più quali appartengono a cosa.
+    var aperta by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(
         modifier = modifier.padding(horizontal = 18.dp),
@@ -133,7 +157,15 @@ fun StatisticheScreen(viewModel: StatisticheViewModel, modifier: Modifier = Modi
                 )
             }
             items(stato.perCategoria, key = { it.categoryId }) { voce ->
-                RigaCategoria(voce, stato.categoria(voce.categoryId))
+                RigaCategoria(
+                    voce = voce,
+                    categoria = stato.categoria(voce.categoryId),
+                    aperta = aperta == voce.categoryId,
+                    dentro = stato.dentroCategoria[voce.categoryId].orEmpty(),
+                    nome = { stato.categoria(it)?.name },
+                    onApri = { aperta = if (aperta == voce.categoryId) null else voce.categoryId },
+                    modifier = Modifier.animateItem(),
+                )
             }
         }
 
@@ -299,10 +331,45 @@ private fun GraficoMensile(stato: StatoStatistiche) {
     }
 }
 
+/**
+ * Una famiglia di spesa, che si apre per dire dove sono finiti quei soldi.
+ *
+ * Il totale risponde a "quanto", non a "dove": duecento euro in Ristoranti diventano
+ * un'informazione solo quando si scopre che centocinquanta erano pizzerie. È la domanda
+ * che viene subito dopo aver letto il numero, e prima non aveva risposta.
+ *
+ * Si apre **al tocco** e non tenendo premuto. La pressione lunga era il gesto con cui si
+ * cancellava un movimento, e l'abbiamo tolta proprio perché nessuno la trovava: non ha
+ * senso reintrodurla altrove. Qui il tocco era libero, ed è lo stesso gesto con cui si
+ * aprono le categorie nelle impostazioni.
+ *
+ * Le barre di dentro sono in scala sulla famiglia, non sul mese: si sta guardando dentro
+ * quella, e riferirle a un totale diverso da quello scritto sopra non tornerebbe.
+ */
 @Composable
-private fun RigaCategoria(voce: CategoryTotal, categoria: Category?) {
+private fun RigaCategoria(
+    voce: CategoryTotal,
+    categoria: Category?,
+    aperta: Boolean,
+    dentro: List<CategoryTotal>,
+    nome: (String) -> String?,
+    onApri: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colore = categoria?.let { tinta(it.colorArgb) } ?: MaterialTheme.colorScheme.onSurfaceVariant
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    // Una famiglia con una voce sola non ha niente da scomporre: aprirla mostrerebbe la
+    // stessa riga due volte, quindi non si apre affatto e non finge di poterlo fare.
+    val scomponibile = dentro.size > 1
+    val rotazione by animateFloatAsState(if (aperta) 90f else 0f, label = "freccia")
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(enabled = scomponibile, onClick = onApri)
+            .padding(vertical = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
@@ -319,27 +386,80 @@ private fun RigaCategoria(voce: CategoryTotal, categoria: Category?) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+            if (scomponibile) {
+                Icon(
+                    Icone.Destra,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(15.dp).rotate(rotazione),
+                )
+                Spacer(Modifier.width(6.dp))
+            }
             Text(
                 voce.total.format(),
                 style = MaterialTheme.typography.titleMedium.tabular,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
+        Barra(voce.share, colore)
+
+        AnimatedVisibility(visible = aperta) {
+            Column(
+                modifier = Modifier.padding(start = 17.dp, top = 8.dp, bottom = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(9.dp),
+            ) {
+                dentro.forEach { sotto ->
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                // La spesa messa sulla famiglia senza scegliere una voce
+                                // esiste e va nominata: chiamarla col nome della famiglia
+                                // la farebbe sembrare un doppione della riga sopra.
+                                if (sotto.categoryId == voce.categoryId) "Senza voce"
+                                else nome(sotto.categoryId) ?: sotto.categoryId,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                "${(sotto.share * 100).roundToInt()}%",
+                                style = MaterialTheme.typography.bodySmall.tabular,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                sotto.total.format(),
+                                style = MaterialTheme.typography.bodyMedium.tabular,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        Barra(sotto.share, colore.copy(alpha = 0.55f), alta = 4.dp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** La barra di una quota. Sempre visibile anche a zero virgola: una riga senza barra sembra rotta. */
+@Composable
+private fun Barra(quota: Double, colore: Color, alta: Dp = 6.dp) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(alta)
+            .clip(RoundedCornerShape(99.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
+                .fillMaxWidth(quota.toFloat().coerceIn(0.02f, 1f))
+                .height(alta)
                 .clip(RoundedCornerShape(99.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(voce.share.toFloat().coerceIn(0.02f, 1f))
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(99.dp))
-                    .background(colore)
-            )
-        }
+                .background(colore)
+        )
     }
 }
 

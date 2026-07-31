@@ -23,6 +23,75 @@ class StatisticsTest {
 
     private val radice = { id: String -> DefaultCategories.rootOf(id)?.id }
 
+    // ──────────────────────────────────────────── dentro una categoria
+
+    @Test
+    fun `una famiglia si scompone nelle sue voci, dalla piu pesante`() {
+        val movimenti = listOf(
+            mov(-1500, "trasporti.pedaggi_e_parcheggi"),
+            mov(-6200, "trasporti.carburante"),
+            mov(-4780, "spesa.supermercato"),
+        )
+        val dentro = Statistics.bySubcategory(movimenti, "trasporti", radice)
+
+        assertEquals(listOf("trasporti.carburante", "trasporti.pedaggi_e_parcheggi"), dentro.map { it.categoryId })
+        assertEquals(Money(-6200).abs(), dentro[0].total)
+        // La spesa di un'altra famiglia non entra nel conto.
+        assertEquals(2, dentro.size)
+    }
+
+    @Test
+    fun `le quote sono sul totale della famiglia, non su quello del mese`() {
+        // Aperta una categoria si sta guardando dentro quella: barre riferite alla
+        // spesa complessiva del mese non tornerebbero con il numero scritto sopra.
+        val movimenti = listOf(
+            mov(-7500, "trasporti.carburante"),
+            mov(-2500, "trasporti.pedaggi_e_parcheggi"),
+            mov(-90000, "casa.affitto"),
+        )
+        val dentro = Statistics.bySubcategory(movimenti, "trasporti", radice)
+
+        assertEquals(0.75, dentro[0].share, 0.0001)
+        assertEquals(0.25, dentro[1].share, 0.0001)
+        assertEquals(1.0, dentro.sumOf { it.share }, 0.0001)
+    }
+
+    @Test
+    fun `la spesa messa sulla radice non sparisce`() {
+        // Chi sceglie "Trasporti" senza dire quale: quei soldi restano nel conto, con
+        // l'identificativo della radice.
+        val movimenti = listOf(
+            mov(-3000, "trasporti"),
+            mov(-1000, "trasporti.carburante"),
+        )
+        val dentro = Statistics.bySubcategory(movimenti, "trasporti", radice)
+
+        assertEquals(listOf("trasporti", "trasporti.carburante"), dentro.map { it.categoryId })
+        assertEquals(Money.of(30), dentro[0].total)
+        assertEquals(Money.of(10), dentro[1].total)
+    }
+
+    @Test
+    fun `una famiglia senza spese non ha voci`() {
+        val movimenti = listOf(mov(-1000, "casa.affitto"))
+        assertTrue(Statistics.bySubcategory(movimenti, "trasporti", radice).isEmpty())
+    }
+
+    @Test
+    fun `i trasferimenti restano fuori anche qui`() {
+        val carta = Account("carta", "Carta", AccountKind.CARD, 0)
+        val contanti = Account("contanti", "Contanti", AccountKind.CASH, 0)
+        val (uscita, entrata) = Ledger.transfer(
+            from = carta, to = contanti, amount = Money.of(200),
+            date = LocalDate.parse("2026-07-10"), groupId = "g", idFactory = { "l$it" },
+        )
+        val movimenti = listOf(mov(-1000, "trasporti.carburante"), uscita, entrata)
+
+        val dentro = Statistics.bySubcategory(movimenti, "trasporti", radice)
+        assertEquals(1, dentro.size)
+        assertEquals(Money.of(10), dentro[0].total)
+    }
+
     // ─────────────────────────────────────────────────── per categoria
 
     @Test

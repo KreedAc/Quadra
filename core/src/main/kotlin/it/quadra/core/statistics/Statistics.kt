@@ -65,6 +65,45 @@ object Statistics {
     }
 
     /**
+     * Come si scompone una famiglia, dalla voce più pesante alla più leggera.
+     *
+     * Il totale di "Ristoranti" dice quanto se n'è andato, non dove: se sono duecento
+     * euro, sapere che centocinquanta sono pizzerie e cinquanta trattorie è la
+     * differenza fra una cifra e una spiegazione. È la domanda che viene subito dopo
+     * aver letto il totale, e finora non aveva risposta dentro l'app.
+     *
+     * Le frazioni sono calcolate **sul totale della famiglia**, non sulla spesa del
+     * mese: aperta una categoria si sta guardando dentro quella, e barre riferite a un
+     * totale diverso da quello scritto sopra non tornerebbero.
+     *
+     * La spesa messa direttamente sulla radice — chi sceglie "Ristoranti" senza dire
+     * quale — resta con l'identificativo della radice, e chi mostra il risultato la
+     * chiamerà come preferisce. Nasconderla farebbe sparire dei soldi dal conto.
+     */
+    fun bySubcategory(
+        transactions: List<Transaction>,
+        root: String,
+        rootOf: (String) -> String?,
+    ): List<CategoryTotal> {
+        val spese = Ledger.spending(transactions)
+            .filter { it.isExpense && (rootOf(it.categoryId) ?: it.categoryId) == root }
+        if (spese.isEmpty()) return emptyList()
+
+        val totale = spese.map { it.amount }.sum().abs()
+        return spese
+            .groupBy { it.categoryId }
+            .map { (categoria, movimenti) ->
+                val somma = movimenti.map { it.amount }.sum().abs()
+                CategoryTotal(
+                    categoryId = categoria,
+                    total = somma,
+                    share = if (totale.isZero) 0.0 else somma.cents.toDouble() / totale.cents,
+                )
+            }
+            .sortedByDescending { it.total.cents }
+    }
+
+    /**
      * Spesa mese per mese, nell'ordine cronologico dei mesi richiesti.
      *
      * I mesi senza movimenti compaiono comunque a zero: un buco nel grafico è

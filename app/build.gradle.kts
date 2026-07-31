@@ -42,8 +42,11 @@ android {
         // nativo, quindi niente desugaring da configurare.
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        // Il codice deve solo crescere: Google rifiuta due caricamenti con lo stesso
+        // numero. Il nome è quello che legge l'utente, e lo mostra la schermata
+        // delle impostazioni leggendolo da qui.
+        versionCode = 2
+        versionName = "1.0.1"
     }
 
     signingConfigs {
