@@ -16,12 +16,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +54,7 @@ import it.quadra.ui.theme.tabular
 import it.quadra.ui.theme.tinta
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,8 +94,8 @@ class StatisticheViewModel(repository: LedgerRepository) : ViewModel() {
      * a luglio finito la domanda è "com'è andato luglio", e la risposta spariva a
      * mezzanotte.
      *
-     * La finestra dei sei mesi resta ancorata a oggi e non al mese scelto: è il contesto
-     * in cui ci si muove, e farla scorrere sotto il dito a ogni tocco disorienterebbe.
+     * Il grafico resta ancorato a oggi e non al mese scelto: è il contesto in cui ci si
+     * muove, e farlo scorrere sotto il dito a ogni tocco disorienterebbe.
      */
     private val mese = MutableStateFlow(YearMonth.now())
 
@@ -107,6 +111,17 @@ class StatisticheViewModel(repository: LedgerRepository) : ViewModel() {
         val indice = categorie.associateBy { it.id }
         val radice = { id: String -> indice[id]?.parentId ?: id }
 
+        // Il grafico arriva indietro fin dove ci sono movimenti, non a sei mesi fissi:
+        // sei erano una scelta arbitraria che tagliava fuori il resto dell'archivio.
+        // Sotto i sei resta a sei — un grafico con due colonne sembra rotto — e sopra i
+        // ventiquattro si ferma, perché due anni di storia sono già più di quanti se ne
+        // scorrano col pollice, e ogni colonna in più è memoria occupata per niente.
+        val primo = movimenti.minOfOrNull { YearMonth.from(it.date) }
+        val finestra = primo
+            ?.let { ChronoUnit.MONTHS.between(it, YearMonth.now()).toInt() + 1 }
+            ?.coerceIn(6, 24)
+            ?: 6
+
         val delMese = movimenti.filter { YearMonth.from(it.date) == meseScelto }
         val famiglie = Statistics.byRootCategory(delMese, radice)
         // La scomposizione si calcola qui e non al tocco: sono poche decine di movimenti,
@@ -120,7 +135,7 @@ class StatisticheViewModel(repository: LedgerRepository) : ViewModel() {
             corrente = meseScelto == YearMonth.now(),
             speso = Ledger.totalSpent(delMese),
             mediaGiornaliera = Statistics.dailyAverage(movimenti, meseScelto),
-            perMese = Statistics.monthlySpending(movimenti, Statistics.lastMonths(YearMonth.now(), 6)),
+            perMese = Statistics.monthlySpending(movimenti, Statistics.lastMonths(YearMonth.now(), finestra)),
             perCategoria = famiglie,
             dentroCategoria = dentro,
             entrato = Statistics.totalIncome(delMese),
@@ -307,32 +322,51 @@ private fun Entrate(stato: StatoStatistiche) {
     }
 }
 
+/**
+ * L'andamento mese per mese, che scorre.
+ *
+ * Le colonne hanno larghezza fissa invece di spartirsi lo schermo: con un numero variabile
+ * di mesi, dividere lo spazio significherebbe che aggiungendo un mese si assottigliano
+ * tutti, e a diciotto mesi resterebbero strisce di due punti. Fisse, si scorre.
+ *
+ * Parte dal fondo, sul mese più recente: è quello che si guarda per primo, e far
+ * cominciare un grafico da un anno fa costringerebbe a scorrere per arrivare a oggi.
+ */
 @Composable
 private fun GraficoMensile(stato: StatoStatistiche, onScegli: (YearMonth) -> Unit) {
     val massimo = stato.massimoMensile.coerceAtLeast(1L)
+    val scorrimento = rememberLazyListState()
+
+    // Solo quando cambia il numero di mesi, non a ogni ridisegno: riportare la vista in
+    // fondo mentre l'utente sta scorrendo indietro sarebbe strappargli il grafico di mano.
+    LaunchedEffect(stato.perMese.size) {
+        if (stato.perMese.isNotEmpty()) scorrimento.scrollToItem(stato.perMese.lastIndex)
+    }
+
     Column(Modifier.fillMaxWidth()) {
         Text(
-            "ULTIMI SEI MESI · TOCCA PER VEDERE",
+            "ANDAMENTO · TOCCA UN MESE",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(14.dp))
-        Row(
+        LazyRow(
+            state = scorrimento,
             modifier = Modifier.fillMaxWidth().height(120.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
-            stato.perMese.forEach { voce ->
+            items(stato.perMese, key = { it.month.toString() }) { voce ->
                 // Evidenziato è il mese che si sta guardando, non quello di calendario:
                 // l'evidenziazione deve seguire il dito, altrimenti si tocca giugno e
                 // resta acceso agosto.
                 val scelto = voce.month == stato.mese
                 Column(
                     modifier = Modifier
-                        .weight(1f)
+                        .width(46.dp)
                         .fillMaxHeight()
-                        // Tutta la colonna è il bersaglio, non la sola barra: una barra
-                        // da due euro è alta quattro punti e non si prende col pollice.
+                        // Tutta la colonna è il bersaglio, non la sola barra: un mese da
+                        // due euro è alto quattro punti e non si prende col pollice.
                         .clip(RoundedCornerShape(10.dp))
                         .clickable { onScegli(voce.month) },
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -346,9 +380,7 @@ private fun GraficoMensile(stato: StatoStatistiche, onScegli: (YearMonth) -> Uni
                             .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                             .then(
                                 if (scelto) Modifier.background(extra.brand)
-                                else Modifier.background(
-                                    extra.brandStart.copy(alpha = 0.32f)
-                                )
+                                else Modifier.background(extra.brandStart.copy(alpha = 0.32f))
                             )
                     )
                     Spacer(Modifier.height(7.dp))
@@ -358,6 +390,15 @@ private fun GraficoMensile(stato: StatoStatistiche, onScegli: (YearMonth) -> Uni
                         color = if (scelto) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    // L'anno solo quando cambia: scorrendo indietro di due anni, "gen"
+                    // da solo non dice quale gennaio.
+                    if (voce.month.monthValue == 1 || voce.month == stato.perMese.first().month) {
+                        Text(
+                            voce.month.year.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        )
+                    }
                 }
             }
         }
