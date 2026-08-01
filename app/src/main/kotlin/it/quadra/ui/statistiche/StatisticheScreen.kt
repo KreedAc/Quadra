@@ -53,15 +53,19 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 private val formatoMeseCorto = DateTimeFormatter.ofPattern("MMM", Locale.ITALIAN)
+private val formatoMeseLungo = DateTimeFormatter.ofPattern("MMMM", Locale.ITALIAN)
 
 data class StatoStatistiche(
     val mese: YearMonth = YearMonth.now(),
+    /** Vero quando si sta guardando il mese in corso: cambia le parole, non i numeri. */
+    val corrente: Boolean = true,
     val speso: Money = Money.ZERO,
     val mediaGiornaliera: Money = Money.ZERO,
     val perMese: List<MonthTotal> = emptyList(),
@@ -78,17 +82,32 @@ data class StatoStatistiche(
 
 class StatisticheViewModel(repository: LedgerRepository) : ViewModel() {
 
+    /**
+     * Il mese che si sta guardando.
+     *
+     * Era fisso su quello corrente, e il primo del mese le statistiche si azzeravano
+     * portandosi via il mese appena finito — proprio quello che uno vuole leggere:
+     * a luglio finito la domanda è "com'è andato luglio", e la risposta spariva a
+     * mezzanotte.
+     *
+     * La finestra dei sei mesi resta ancorata a oggi e non al mese scelto: è il contesto
+     * in cui ci si muove, e farla scorrere sotto il dito a ogni tocco disorienterebbe.
+     */
+    private val mese = MutableStateFlow(YearMonth.now())
+
+    fun scegliMese(nuovo: YearMonth) { mese.value = nuovo }
+
     val stato: StateFlow<StatoStatistiche> = combine(
         repository.observeAllTransactions(),
         repository.observeCategories(),
-    ) { movimenti, categorie ->
-        val mese = YearMonth.now()
+        mese,
+    ) { movimenti, categorie, meseScelto ->
         // La risoluzione della radice viene dalle categorie in archivio, non da quelle
         // predefinite: se l'utente ne ha create di sue devono aggregarsi correttamente.
         val indice = categorie.associateBy { it.id }
         val radice = { id: String -> indice[id]?.parentId ?: id }
 
-        val delMese = movimenti.filter { YearMonth.from(it.date) == mese }
+        val delMese = movimenti.filter { YearMonth.from(it.date) == meseScelto }
         val famiglie = Statistics.byRootCategory(delMese, radice)
         // La scomposizione si calcola qui e non al tocco: sono poche decine di movimenti,
         // e farla in composizione significherebbe rifare il conto a ogni ridisegno.
@@ -97,10 +116,11 @@ class StatisticheViewModel(repository: LedgerRepository) : ViewModel() {
         }
 
         StatoStatistiche(
-            mese = mese,
+            mese = meseScelto,
+            corrente = meseScelto == YearMonth.now(),
             speso = Ledger.totalSpent(delMese),
-            mediaGiornaliera = Statistics.dailyAverage(movimenti, mese),
-            perMese = Statistics.monthlySpending(movimenti, Statistics.lastMonths(mese, 6)),
+            mediaGiornaliera = Statistics.dailyAverage(movimenti, meseScelto),
+            perMese = Statistics.monthlySpending(movimenti, Statistics.lastMonths(YearMonth.now(), 6)),
             perCategoria = famiglie,
             dentroCategoria = dentro,
             entrato = Statistics.totalIncome(delMese),
@@ -143,7 +163,7 @@ fun StatisticheScreen(viewModel: StatisticheViewModel, modifier: Modifier = Modi
         }
 
         if (stato.perMese.isNotEmpty()) {
-            item { GraficoMensile(stato) }
+            item { GraficoMensile(stato) { viewModel.scegliMese(it) } }
         }
 
         if (stato.perCategoria.isEmpty()) {
@@ -191,7 +211,11 @@ private fun Riepilogo(stato: StatoStatistiche) {
             .padding(20.dp),
     ) {
         Text(
-            "Spesa di questo mese",
+            // "Questo mese" solo quando è davvero questo: guardando giugno da agosto
+            // sarebbe una bugia, e su una schermata di numeri le parole devono essere
+            // precise quanto le cifre.
+            if (stato.corrente) "Spesa di questo mese"
+            else "Spesa di ${stato.mese.atDay(1).format(formatoMeseLungo)}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -284,11 +308,11 @@ private fun Entrate(stato: StatoStatistiche) {
 }
 
 @Composable
-private fun GraficoMensile(stato: StatoStatistiche) {
+private fun GraficoMensile(stato: StatoStatistiche, onScegli: (YearMonth) -> Unit) {
     val massimo = stato.massimoMensile.coerceAtLeast(1L)
     Column(Modifier.fillMaxWidth()) {
         Text(
-            "ULTIMI SEI MESI",
+            "ULTIMI SEI MESI · TOCCA PER VEDERE",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -299,9 +323,18 @@ private fun GraficoMensile(stato: StatoStatistiche) {
             verticalAlignment = Alignment.Bottom,
         ) {
             stato.perMese.forEach { voce ->
-                val corrente = voce.month == stato.mese
+                // Evidenziato è il mese che si sta guardando, non quello di calendario:
+                // l'evidenziazione deve seguire il dito, altrimenti si tocca giugno e
+                // resta acceso agosto.
+                val scelto = voce.month == stato.mese
                 Column(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        // Tutta la colonna è il bersaglio, non la sola barra: una barra
+                        // da due euro è alta quattro punti e non si prende col pollice.
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onScegli(voce.month) },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Bottom,
                 ) {
@@ -312,7 +345,7 @@ private fun GraficoMensile(stato: StatoStatistiche) {
                             .fillMaxHeight(frazione * 0.82f)
                             .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                             .then(
-                                if (corrente) Modifier.background(extra.brand)
+                                if (scelto) Modifier.background(extra.brand)
                                 else Modifier.background(
                                     extra.brandStart.copy(alpha = 0.32f)
                                 )
@@ -322,7 +355,7 @@ private fun GraficoMensile(stato: StatoStatistiche) {
                     Text(
                         voce.month.atDay(1).format(formatoMeseCorto),
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (corrente) MaterialTheme.colorScheme.onSurface
+                        color = if (scelto) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
