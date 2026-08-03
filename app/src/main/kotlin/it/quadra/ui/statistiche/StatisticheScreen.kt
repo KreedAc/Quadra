@@ -209,6 +209,22 @@ fun StatisticheScreen(viewModel: StatisticheViewModel, modifier: Modifier = Modi
     }
 }
 
+/**
+ * Che mese si sta guardando, scritto una volta sola e nel posto giusto.
+ *
+ * L'anno stava sotto le colonne del grafico, e lì costava caro: le colonne sono allineate
+ * in basso, quindi quella riga o sollevava la sola colonna che ce l'aveva — disallineando
+ * tutte le etichette — oppure andava riservata sotto ognuna, lasciando una striscia vuota
+ * sotto l'intero grafico. Qui non costa niente, e compare nel momento in cui serve
+ * davvero: quando si è toccato un mese di un altro anno e bisogna sapere quale.
+ */
+private fun quandoDetto(stato: StatoStatistiche): String = when {
+    stato.corrente -> "Spesa di questo mese"
+    stato.mese.year != YearMonth.now().year ->
+        "Spesa di ${stato.mese.atDay(1).format(formatoMeseLungo)} ${stato.mese.year}"
+    else -> "Spesa di ${stato.mese.atDay(1).format(formatoMeseLungo)}"
+}
+
 @Composable
 private fun Riepilogo(stato: StatoStatistiche) {
     Column(
@@ -229,9 +245,8 @@ private fun Riepilogo(stato: StatoStatistiche) {
         Text(
             // "Questo mese" solo quando è davvero questo: guardando giugno da agosto
             // sarebbe una bugia, e su una schermata di numeri le parole devono essere
-            // precise quanto le cifre.
-            if (stato.corrente) "Spesa di questo mese"
-            else "Spesa di ${stato.mese.atDay(1).format(formatoMeseLungo)}",
+            // precise quanto le cifre. L'anno compare solo se non è quello in corso.
+            quandoDetto(stato),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -398,24 +413,6 @@ private fun GraficoMensile(stato: StatoStatistiche, onScegli: (YearMonth) -> Uni
                         style = MaterialTheme.typography.labelSmall,
                         color = if (scelto) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    // L'anno si legge solo dove cambia — scorrendo indietro di due anni
-                    // "gen" da solo non dice quale gennaio — ma la riga c'è sempre.
-                    //
-                    // Le colonne sono allineate in basso: una riga in più sotto una sola
-                    // di loro sollevava quella colonna intera, etichetta e barra, e le
-                    // scritte dei mesi smettevano di stare sulla stessa linea. Occupare
-                    // comunque lo spazio costa un testo trasparente e le riallinea tutte.
-                    val mostraAnno = voce.month.monthValue == 1 ||
-                        voce.month == stato.perMese.first().month
-                    Text(
-                        voce.month.year.toString(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (mostraAnno) {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        } else {
-                            Color.Transparent
-                        },
                     )
                 }
             }
