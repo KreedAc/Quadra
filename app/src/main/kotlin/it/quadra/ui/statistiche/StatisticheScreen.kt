@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -350,10 +351,18 @@ private fun GraficoMensile(stato: StatoStatistiche, onScegli: (YearMonth) -> Uni
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(14.dp))
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val spazio = 8.dp
+            val quanti = stato.perMese.size.coerceAtLeast(1)
+            // Quando i mesi ci stanno tutti, le colonne si allargano fino a riempire la
+            // riga. A larghezza fissa restava un vuoto a destra dopo l'ultimo mese, e un
+            // grafico che si ferma prima del bordo sembra interrotto invece che finito.
+            // Quando non ci stanno, la larghezza scende al minimo leggibile e si scorre.
+            val larghezza = ((maxWidth - spazio * (quanti - 1)) / quanti).coerceAtLeast(46.dp)
         LazyRow(
             state = scorrimento,
             modifier = Modifier.fillMaxWidth().height(120.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(spazio),
             verticalAlignment = Alignment.Bottom,
         ) {
             items(stato.perMese, key = { it.month.toString() }) { voce ->
@@ -363,7 +372,7 @@ private fun GraficoMensile(stato: StatoStatistiche, onScegli: (YearMonth) -> Uni
                 val scelto = voce.month == stato.mese
                 Column(
                     modifier = Modifier
-                        .width(46.dp)
+                        .width(larghezza)
                         .fillMaxHeight()
                         // Tutta la colonna è il bersaglio, non la sola barra: un mese da
                         // due euro è alto quattro punti e non si prende col pollice.
@@ -390,17 +399,27 @@ private fun GraficoMensile(stato: StatoStatistiche, onScegli: (YearMonth) -> Uni
                         color = if (scelto) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    // L'anno solo quando cambia: scorrendo indietro di due anni, "gen"
-                    // da solo non dice quale gennaio.
-                    if (voce.month.monthValue == 1 || voce.month == stato.perMese.first().month) {
-                        Text(
-                            voce.month.year.toString(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        )
-                    }
+                    // L'anno si legge solo dove cambia — scorrendo indietro di due anni
+                    // "gen" da solo non dice quale gennaio — ma la riga c'è sempre.
+                    //
+                    // Le colonne sono allineate in basso: una riga in più sotto una sola
+                    // di loro sollevava quella colonna intera, etichetta e barra, e le
+                    // scritte dei mesi smettevano di stare sulla stessa linea. Occupare
+                    // comunque lo spazio costa un testo trasparente e le riallinea tutte.
+                    val mostraAnno = voce.month.monthValue == 1 ||
+                        voce.month == stato.perMese.first().month
+                    Text(
+                        voce.month.year.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (mostraAnno) {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        } else {
+                            Color.Transparent
+                        },
+                    )
                 }
             }
+        }
         }
     }
 }
