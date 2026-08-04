@@ -45,8 +45,8 @@ android {
         // Il codice deve solo crescere: Google rifiuta due caricamenti con lo stesso
         // numero. Il nome è quello che legge l'utente, e lo mostra la schermata
         // delle impostazioni leggendolo da qui.
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
     }
 
     signingConfigs {
