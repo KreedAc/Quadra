@@ -211,72 +211,79 @@ fun Root(repository: LedgerRepository) {
             // La colonna sta al centro; la barra di navigazione resta larga quanto lo
             // schermo, perché è del dispositivo e non del contenuto.
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            AnimatedContent(
-                targetState = vista,
-                transitionSpec = { transizione(initialState, targetState) },
-                label = "vista",
-            ) { corrente ->
-                // Su tablet il contenuto smette di allargarsi e si centra.
-                //
-                // Senza un limite una riga di movimento si stira per mille punti, con il
-                // nome a sinistra, l'importo a destra e in mezzo un vuoto che l'occhio
-                // deve attraversare a ogni riga; il tastierino diventa una tastiera da
-                // pianoforte e la griglia delle categorie quattro riquadri enormi. Non è
-                // questione di gusto: una riga lunga il doppio del comodo si legge
-                // peggio, ed è la ragione per cui i giornali hanno le colonne.
-                //
-                // 560 punti sono poco più di un telefono grande, cioè la misura per cui
-                // ogni schermata è stata disegnata. Sotto quella soglia — cioè su tutti
-                // i telefoni — queste righe non fanno assolutamente niente.
-                val contenuto = Modifier
-                    .fillMaxSize()
-                    .widthIn(max = LARGHEZZA_MASSIMA)
-                    .padding(insets)
-                when (corrente.sotto) {
-                    Sotto.CATEGORIE -> CategorieScreen(
-                        viewModel = categorieVM,
-                        onIndietro = { vista = vista.copy(sotto = null) },
-                        modifier = contenuto,
-                    )
-
-                    Sotto.RICORRENTI -> RicorrentiScreen(
-                        viewModel = ricorrentiVM,
-                        onIndietro = { vista = vista.copy(sotto = null) },
-                        modifier = contenuto,
-                    )
-
-                    Sotto.AGGIUNGI -> {
-                        val stato by movimentiVM.stato.collectAsStateWithLifecycle()
-                        AggiungiScreen(
-                            categorie = stato.categoriePrincipali,
-                            tutteLeCategorie = stato.categorie,
-                            conti = stato.conti,
-                            saldi = stato.saldi,
-                            onChiudi = { vista = vista.copy(sotto = null) },
-                            onPersonalizza = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
-                            onSalva = { importo, categoriaId, contoId, nota ->
-                                movimentiVM.aggiungi(importo, categoriaId, contoId, nota)
-                                vista = vista.copy(sotto = null)
-                            },
-                            modifier = Modifier.fillMaxSize().padding(insets),
-                        )
-                    }
-
-                    null -> when (corrente.scheda) {
-                        Destinazione.MOVIMENTI -> MovimentiScreen(movimentiVM, snackbar, contenuto)
-                        Destinazione.CONTI -> ContiScreen(contiVM, contenuto)
-                        Destinazione.STATISTICHE -> StatisticheScreen(statisticheVM, contenuto)
-                        Destinazione.IMPOSTAZIONI -> ImpostazioniScreen(
-                            viewModel = impostazioniVM,
-                            snackbar = snackbar,
-                            onApriCategorie = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
-                            onApriRicorrenti = { vista = vista.copy(sotto = Sotto.RICORRENTI) },
-                            onApriTutorial = { riaperto = true },
+                AnimatedContent(
+                    targetState = vista,
+                    transitionSpec = { transizione(initialState, targetState) },
+                    label = "vista",
+                ) { corrente ->
+                    // Su tablet il contenuto smette di allargarsi e si centra.
+                    //
+                    // Senza un limite una riga di movimento si stira per mille punti, con il
+                    // nome a sinistra, l'importo a destra e in mezzo un vuoto che l'occhio
+                    // deve attraversare a ogni riga; il tastierino diventa una tastiera da
+                    // pianoforte e la griglia delle categorie quattro riquadri enormi. Non è
+                    // questione di gusto: una riga lunga il doppio del comodo si legge
+                    // peggio, ed è la ragione per cui i giornali hanno le colonne.
+                    //
+                    // 560 punti sono poco più di un telefono grande, cioè la misura per cui
+                    // ogni schermata è stata disegnata. Sotto quella soglia — cioè su tutti
+                    // i telefoni — queste righe non fanno assolutamente niente.
+                    //
+                    // L'ordine conta, ed è il motivo per cui la prima versione non faceva
+                    // niente: in Compose il primo modificatore della catena è quello esterno.
+                    // Scritto `fillMaxSize().widthIn(...)`, il riempimento fissa la larghezza
+                    // al massimo disponibile prima che il limite possa dire la sua, e il
+                    // limite si trova dentro un nodo già largo quanto lo schermo. Al
+                    // contrario, il limite stringe i vincoli e il riempimento riempie quelli.
+                    val contenuto = Modifier
+                        .widthIn(max = LARGHEZZA_MASSIMA)
+                        .fillMaxSize()
+                        .padding(insets)
+                    when (corrente.sotto) {
+                        Sotto.CATEGORIE -> CategorieScreen(
+                            viewModel = categorieVM,
+                            onIndietro = { vista = vista.copy(sotto = null) },
                             modifier = contenuto,
                         )
+
+                        Sotto.RICORRENTI -> RicorrentiScreen(
+                            viewModel = ricorrentiVM,
+                            onIndietro = { vista = vista.copy(sotto = null) },
+                            modifier = contenuto,
+                        )
+
+                        Sotto.AGGIUNGI -> {
+                            val stato by movimentiVM.stato.collectAsStateWithLifecycle()
+                            AggiungiScreen(
+                                categorie = stato.categoriePrincipali,
+                                tutteLeCategorie = stato.categorie,
+                                conti = stato.conti,
+                                saldi = stato.saldi,
+                                onChiudi = { vista = vista.copy(sotto = null) },
+                                onPersonalizza = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
+                                onSalva = { importo, categoriaId, contoId, nota ->
+                                    movimentiVM.aggiungi(importo, categoriaId, contoId, nota)
+                                    vista = vista.copy(sotto = null)
+                                },
+                                modifier = Modifier.fillMaxSize().padding(insets),
+                            )
+                        }
+
+                        null -> when (corrente.scheda) {
+                            Destinazione.MOVIMENTI -> MovimentiScreen(movimentiVM, snackbar, contenuto)
+                            Destinazione.CONTI -> ContiScreen(contiVM, contenuto)
+                            Destinazione.STATISTICHE -> StatisticheScreen(statisticheVM, contenuto)
+                            Destinazione.IMPOSTAZIONI -> ImpostazioniScreen(
+                                viewModel = impostazioniVM,
+                                snackbar = snackbar,
+                                onApriCategorie = { vista = vista.copy(sotto = Sotto.CATEGORIE) },
+                                onApriRicorrenti = { vista = vista.copy(sotto = Sotto.RICORRENTI) },
+                                onApriTutorial = { riaperto = true },
+                                modifier = contenuto,
+                            )
+                        }
                     }
                 }
-            }
             }
         }
 
